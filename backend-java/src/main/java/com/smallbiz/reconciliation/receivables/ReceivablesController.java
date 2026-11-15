@@ -10,7 +10,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/tenants/{tenantId}")
 public class ReceivablesController {
     private final ReceivablesService service;
-    public ReceivablesController(ReceivablesService service) { this.service = service; }
+    private final InvoiceCancellationService cancellations;
+    public ReceivablesController(ReceivablesService service, InvoiceCancellationService cancellations) {
+        this.service = service; this.cancellations = cancellations;
+    }
 
     @PostMapping("/counterparties")
     public ResponseEntity<ReceivablesService.CounterpartyResponse> createCounterparty(@PathVariable UUID tenantId,
@@ -40,6 +43,19 @@ public class ReceivablesController {
     @GetMapping("/invoices/{id}")
     public ReceivablesService.InvoiceResponse invoice(@PathVariable UUID tenantId, @PathVariable UUID id) {
         return service.getInvoice(tenantId, id);
+    }
+    @PostMapping("/invoices/{id}/cancel")
+    public InvoiceCancellationService.CancellationResponse cancelInvoice(@PathVariable UUID tenantId, @PathVariable UUID id,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key, @RequestBody Map<String, Object> body) {
+        return cancellations.cancel(tenantId, id, key, body);
+    }
+    @GetMapping("/invoices/{id}/cancellation")
+    public InvoiceCancellationService.CancellationResponse invoiceCancellation(@PathVariable UUID tenantId, @PathVariable UUID id) {
+        return cancellations.get(tenantId, id);
+    }
+    @GetMapping("/invoices/{id}/replacement")
+    public InvoiceCancellationService.ReplacementResponse invoiceReplacement(@PathVariable UUID tenantId, @PathVariable UUID id) {
+        return cancellations.replacement(tenantId, id);
     }
     @PostMapping("/payments")
     public ResponseEntity<ReceivablesService.PaymentResponse> createPayment(@PathVariable UUID tenantId,

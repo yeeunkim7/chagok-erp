@@ -20,4 +20,4 @@ export function validAmount(value: string): boolean {
   return /^[1-9]\d{0,12}$/.test(value) && BigInt(value) <= 1000000000000n;
 }
 export const dateLabel = (value: string) => value.replaceAll('-', '.');
-export const statusLabel = (status: string) => ({ UNPAID: '입금 미연결', PARTIAL: '일부 연결', PAID: '입금 연결 완료', UNALLOCATED: '미연결', ALLOCATED: '전체 연결' }[status] ?? '상태 확인 필요');
+export const statusLabel = (status: string) => ({ UNPAID: '입금 미연결', PARTIAL: '일부 연결', PAID: '입금 연결 완료', CANCELLED: '청구 취소', UNALLOCATED: '미연결', ALLOCATED: '전체 연결' }[status] ?? '상태 확인 필요');

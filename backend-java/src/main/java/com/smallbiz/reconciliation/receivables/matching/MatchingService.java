@@ -129,7 +129,9 @@ public class MatchingService {
                     FROM receivable_invoice i
                     JOIN receivable_counterparty cp ON cp.tenant_id=i.tenant_id AND cp.id=i.counterparty_id
                     LEFT JOIN active a ON a.invoice_id=i.id
-                    WHERE i.tenant_id=? AND i.issue_date<=? GROUP BY i.id,cp.id
+                    WHERE i.tenant_id=? AND i.issue_date<=? AND NOT EXISTS (
+                        SELECT FROM receivable_invoice_cancellation ic WHERE ic.tenant_id=i.tenant_id AND ic.invoice_id=i.id
+                    ) GROUP BY i.id,cp.id
                 ), bounded_payments AS (
                     SELECT * FROM payment_rows WHERE allocated<>amount ORDER BY id LIMIT ?
                 ), bounded_invoices AS (

@@ -58,13 +58,23 @@ public class ReceivablesService {
         return create(tenant, key, () -> RegistrationInput.invoice(body), input -> {
             // Tenant-filtered lookup precedes all uniqueness/idempotency lookups.
             counterparty(tenant, input.counterpartyId());
-            return replayOrCreate(tenant, key, Operation.INVOICE, input, UUID.randomUUID(), resultId -> {
+            return replayOrCreate(tenant, key, Operation.INVOICE, input.hashInput(), UUID.randomUUID(), resultId -> {
+                if (input.replacesInvoiceId() != null) lockReplacementTarget(tenant, input.replacesInvoiceId());
+                UUID actor = auth.requireActiveSession().accountId();
+                OffsetDateTime time = now();
                 jdbc.update("""
                         INSERT INTO receivable_invoice
                         (id,tenant_id,counterparty_id,invoice_number,amount,issue_date,due_date,created_by,created_at)
                         VALUES (?,?,?,?,?,?,?,?,?)
                         """, resultId, tenant, input.counterpartyId(), input.invoiceNumber(), input.amount(),
-                        input.issueDate(), input.dueDate(), auth.requireActiveSession().accountId(), now());
+                        input.issueDate(), input.dueDate(), actor, time);
+                if (input.replacesInvoiceId() != null) {
+                    jdbc.update("""
+                            INSERT INTO receivable_invoice_replacement
+                            (tenant_id,cancelled_invoice_id,replacement_invoice_id,created_by,created_at)
+                            VALUES (?,?,?,?,?)
+                            """, tenant, input.replacesInvoiceId(), resultId, actor, time);
+                }
                 return invoice(tenant, resultId);
             }, resultId -> invoice(tenant, resultId));
         });
@@ -173,6 +183,16 @@ public class ReceivablesService {
     }
     private PaymentResponse payment(UUID tenant, UUID id) {
         return one(jdbc.query("SELECT * FROM receivable_payment WHERE tenant_id=? AND id=?", PAYMENT, tenant, id));
+    }
+    private void lockReplacementTarget(UUID tenant, UUID id) {
+        one(jdbc.query("SELECT id FROM receivable_invoice WHERE tenant_id=? AND id=? FOR UPDATE",
+                (rs, row) -> rs.getObject("id", UUID.class), tenant, id));
+        if (!Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT FROM receivable_invoice_cancellation WHERE tenant_id=? AND invoice_id=?)
+                """, Boolean.class, tenant, id))) throw ReceivablesException.notCancelled();
+        if (Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT FROM receivable_invoice_replacement WHERE tenant_id=? AND cancelled_invoice_id=?)
+                """, Boolean.class, tenant, id))) throw ReceivablesException.alreadyReplaced();
     }
     private static <T> T one(List<T> rows) {
         if (rows.isEmpty()) throw ReceivablesException.missing();
