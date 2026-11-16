@@ -1,0 +1,121 @@
+name: Java CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: java-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      AI_API_KEY: ''
+      APP_AI_ENABLED: 'false'
+      PGHOST: 127.0.0.1
+      TEST_DB_USERNAME: chagok_test
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:40865bc877a289da75963d97d72b59633f639fc5af7a4e856bfa3714cae5b536
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          # Disposable service bootstrap value; unrelated to repository/production secrets.
+          POSTGRES_PASSWORD: ci-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 21
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6 (peeled commit)
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          validate-wrappers: true
+          dependency-graph: disabled
+          build-scan-publish: false
+
+      - name: Generate disposable test configuration
+        env:
+          SERVICE_DB_PORT: ${{ job.services.postgres.ports['5432'] }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import secrets
+          port = int(os.environ['SERVICE_DB_PORT'])
+          if not 1024 <= port <= 65535 or port == 5432:
+              raise SystemExit('An isolated, explicitly mapped PostgreSQL port is required.')
+          password = secrets.token_urlsafe(48)
+          print('::add-mask::' + password)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write(f'PGPORT={port}\n')
+              output.write(f'TEST_DB_PASSWORD={password}\n')
+              output.write(f'TEST_DB_URL=jdbc:postgresql://127.0.0.1:{port}/reconciliation_test\n')
+              output.write(f'DB_URL=jdbc:postgresql://127.0.0.1:{port}/reconciliation_dev\n')
+          PY
+
+      - name: Initialize isolated test database
+        id: init
+        env:
+          CI_DB_ADMIN_PASSWORD: ci-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash scripts/ci/init-test-db.sh
+
+      - name: Clean build and test
+        id: build
+        working-directory: backend-java
+        run: |
+          set +e
+          bash ./gradlew --no-daemon --console=plain clean build
+          build_exit=$?
+          printf 'exit_code=%s\n' "$build_exit" >> "$GITHUB_OUTPUT"
+          exit "$build_exit"
+
+      - name: Verify applied Flyway migrations
+        id: flyway
+        if: ${{ always() && steps.init.outcome == 'success' }}
+        run: python3 scripts/ci/verify-flyway.py
+
+      - name: Summarize test results
+        if: ${{ always() }}
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          BUILD_EXIT_CODE: ${{ steps.build.outputs.exit_code }}
+          FLYWAY_OUTCOME: ${{ steps.flyway.outcome }}
+        run: python3 scripts/ci/summarize-tests.py
+
+      - name: Upload test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: java-test-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            backend-java/build/reports/tests/test/
+            backend-java/build/test-results/test/TEST-*.xml
+            backend-java/build/ci-summary.md
+          if-no-files-found: warn
+          retention-days: 7
