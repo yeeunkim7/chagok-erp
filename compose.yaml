@@ -1,0 +1,149 @@
+name: chagok-local
+
+services:
+  db-dev:
+    image: postgres:17-bookworm@sha256:40865bc877a289da75963d97d72b59633f639fc5af7a4e856bfa3714cae5b536
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/admin_dev
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      APP_DB_USER: chagok_dev
+      APP_DB_NAME: reconciliation_dev
+      APP_DB_PASSWORD_FILE: /run/secrets/app_dev
+    entrypoint: ["/bin/sh", "/opt/docker/postgres-entrypoint.sh"]
+    command: ["postgres"]
+    secrets: [admin_dev, app_dev]
+    volumes:
+      - pg-dev:/var/lib/postgresql/data
+      - ./docker/postgres-entrypoint.sh:/opt/docker/postgres-entrypoint.sh:ro
+      - ./docker/init-app-db.sh:/docker-entrypoint-initdb.d/10-app-db.sh:ro
+    networks: [dev]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          test -s "$$APP_DB_PASSWORD_FILE" &&
+          PGPASSWORD="$$(cat "$$APP_DB_PASSWORD_FILE")"
+          psql --no-psqlrc --no-password --host=127.0.0.1
+          --username="$$APP_DB_USER" --dbname="$$APP_DB_NAME"
+          --command='SELECT 1' --tuples-only --no-align >/dev/null
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  backend:
+    image: chagok-backend:local
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+      target: runtime
+      additional_contexts:
+        docker: ./docker
+    # Root reads the host's 0600 secret, then entrypoint execs Java as UID 10001.
+    user: "0:0"
+    environment:
+      DB_URL: jdbc:postgresql://db-dev:5432/reconciliation_dev
+      DB_USERNAME: chagok_dev
+      DB_PASSWORD_FILE: /run/secrets/app_dev
+      AI_API_KEY: ""
+      APP_AI_ENABLED: "false"
+    secrets: [app_dev]
+    ports: ["127.0.0.1:18091:8080"]
+    networks: [dev]
+    depends_on:
+      db-dev:
+        condition: service_healthy
+
+  web:
+    image: chagok-web:local
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        EXPO_PUBLIC_API_URL: http://localhost:18080
+      additional_contexts:
+        docker: ./docker
+    ports: ["127.0.0.1:18080:8080"]
+    networks: [dev]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  db-test:
+    image: postgres:17-bookworm@sha256:40865bc877a289da75963d97d72b59633f639fc5af7a4e856bfa3714cae5b536
+    profiles: [test]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/admin_test
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      APP_DB_USER: chagok_test
+      APP_DB_NAME: reconciliation_test
+      APP_DB_PASSWORD_FILE: /run/secrets/app_test
+    entrypoint: ["/bin/sh", "/opt/docker/postgres-entrypoint.sh"]
+    command: ["postgres"]
+    secrets: [admin_test, app_test]
+    volumes:
+      - pg-test:/var/lib/postgresql/data
+      - ./docker/postgres-entrypoint.sh:/opt/docker/postgres-entrypoint.sh:ro
+      - ./docker/init-app-db.sh:/docker-entrypoint-initdb.d/10-app-db.sh:ro
+    networks: [test]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          test -s "$$APP_DB_PASSWORD_FILE" &&
+          PGPASSWORD="$$(cat "$$APP_DB_PASSWORD_FILE")"
+          psql --no-psqlrc --no-password --host=127.0.0.1
+          --username="$$APP_DB_USER" --dbname="$$APP_DB_NAME"
+          --command='SELECT 1' --tuples-only --no-align >/dev/null
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  test-runner:
+    image: chagok-test-runner:local
+    profiles: [test]
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+      target: test-runner
+      additional_contexts:
+        docker: ./docker
+    user: "0:0"
+    environment:
+      TEST_DB_URL: jdbc:postgresql://db-test:5432/reconciliation_test
+      TEST_DB_USERNAME: chagok_test
+      TEST_DB_PASSWORD_FILE: /run/secrets/app_test
+      # Comparison input for TestDatabaseIsolation; runner cannot reach dev network.
+      DB_URL: jdbc:postgresql://db-dev:5432/reconciliation_dev
+      AI_API_KEY: ""
+      APP_AI_ENABLED: "false"
+    secrets: [app_test]
+    networks: [test]
+    depends_on:
+      db-test:
+        condition: service_healthy
+
+secrets:
+  admin_dev:
+    file: ./.local/docker-secrets/admin_dev
+  app_dev:
+    file: ./.local/docker-secrets/app_dev
+  admin_test:
+    file: ./.local/docker-secrets/admin_test
+  app_test:
+    file: ./.local/docker-secrets/app_test
+
+volumes:
+  pg-dev:
+  pg-test:
+
+networks:
+  dev:
+  test:

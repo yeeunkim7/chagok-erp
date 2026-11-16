@@ -1,0 +1,7 @@
+allprojects {
+    tasks.register('resolveDockerTestDependencies') {
+        doLast {
+            configurations.testRuntimeClasspath.resolve()
+        }
+    }
+}

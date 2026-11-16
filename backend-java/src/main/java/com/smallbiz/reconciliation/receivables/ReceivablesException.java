@@ -20,4 +20,16 @@ public class ReceivablesException extends RuntimeException {
     static ReceivablesException keyConflict() {
         return new ReceivablesException("IDEMPOTENCY_CONFLICT", 409, "The idempotency key was used for another request.");
     }
+    static ReceivablesException alreadyCancelled() {
+        return new ReceivablesException("INVOICE_ALREADY_CANCELLED", 409, "The invoice has already been cancelled.");
+    }
+    static ReceivablesException activeAllocations() {
+        return new ReceivablesException("INVOICE_HAS_ACTIVE_ALLOCATIONS", 409, "Cancel active allocations before cancelling the invoice.");
+    }
+    static ReceivablesException notCancelled() {
+        return new ReceivablesException("INVOICE_NOT_CANCELLED", 409, "A replacement requires a cancelled original invoice.");
+    }
+    static ReceivablesException alreadyReplaced() {
+        return new ReceivablesException("INVOICE_ALREADY_REPLACED", 409, "The cancelled invoice already has a replacement.");
+    }
 }

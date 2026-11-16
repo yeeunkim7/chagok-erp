@@ -225,3 +225,95 @@ DB 권한 격리 미충족으로 배분 통합 테스트·Flyway·테스트 데�
 AllocationIntegrationTest에 청구100000/입금40000의 정확한 검수 흐름 1개를 추가했다. 확정 후 미수60000, 동일 요청 기존 결과 재사용 및 배분1건, 잔액을 넘는 추가 배분409 후 미수60000 유지, 취소 후 미수100000/미배분40000, 원본 청구·입금 보존, 배분행1개와 확정·취소 감사2개를 검사한다. 기존 테스트는 동시성·초과 배분·후반 감사 실패 롤백도 검증한다. 독립 코드 재검토에서 추가 결함 없음.
 
 실행: source /workspace/.local/env.sh 후 JAVA_HOME=/workspace/.local/jdk/usr/lib/jvm/java-21-openjdk-amd64 GRADLE_USER_HOME=/workspace/.gradle bash gradlew --offline --no-daemon --project-cache-dir /workspace/.local/gradle-project -Dorg.gradle.java.installations.paths=/workspace/.local/jdk/usr/lib/jvm/java-21-openjdk-amd64 test --tests com.smallbiz.reconciliation.vendor.TestDatabaseIsolationTest --tests com.smallbiz.reconciliation.receivables.allocation.AllocationIntegrationTest. BUILD SUCCESSFUL、22초. XML: 가드10+배분18=총28개 통과, 실패·오류·스킵0. 테스트 후 임시 제약조건 제거·V13 성공 유지·개발 CONNECT 차단 유지 재확인. 유료 모델·전체 회귀·실기기·Supabase 연결은 미실행. 제품 소스 변경·환경 게시·커밋·푸시는 하지 않았다. 다음 검수는 별도 승인 후 진행한다.
+
+
+## 2026-11-12 로컬 SQLite 추적 제외
+
+사용자 승인으로 정리 브랜치에서 accounting.db의 Git 추적만 해제하고 루트 파일·보조 파일 제외 규칙을 추가했다. 기존 로컬 DB의 해시는 유지했고 데이터 행은 읽지 않았다. Java/PostgreSQL·Python 소스·마이그레이션 변경은 없다. 별도 임시 경로에서 기존 Alembic cc75580579fd를 적용·재실행하여 업무 테이블 3개·0행·무결성을 확인했다(SQLAlchemy 2.1.8, Alembic 1.20.1). 의존성은 저장소 밖 검증 가상환경에 설치했다. migrations/README에 초기화 및 다른 PC의 pull 전 백업 절차를 기록했다. 전체 Python API·Java 회귀는 이번 범위 밖이며 과거 Git 이력의 DB는 남는다.
+
+
+## 2026-11-12 발표자료와 중복 안내 분리
+
+사용자 승인으로 발표자료·학습 문서·발표용 캡처 19개를 저장소 밖 개인 보관본에 복사하고 SHA-256을 대조한 뒤 Git 추적에서 제외했다. 기존 로컬 파일도 유지하고 재추적 방지 규칙을 추가했다. 상대 링크 대상은 참고 사본으로 함께 보관했다. 중복 자료 안내는 보관본 ARCHIVE_README.md에 모으고 기존 안내 원문은 보존했다. 저장소 README와 관련 문서의 개인 자료 링크를 정리했으며 고유한 업무 계약·검토·테스트 기록은 삭제하지 않았다. 정리 범위와 현재 문서 역할은 DOCUMENTATION_REVIEW.md에 기록했다. 기능 코드·마이그레이션·테스트 스크린샷은 그대로이며 과거 Git 이력은 재작성하지 않는다.
+
+검증: Git 추적 목록 기준 Markdown 파일 링크 누락 0개, 발표자료 19개의 로컬·외부 보관 해시 일치, 소스·마이그레이션 등 251개 파일 해시 보존을 확인했다. 입금 복구 브랜치 1760458은 변경하지 않았다. 문서·추적 정리만 수행해 Java·모바일 전체 테스트와 시연 재생은 다시 실행하지 않았다.
+
+
+## 2026-11-12 지난 검수 커밋 및 재시작 중복 등록 조사
+
+사용자 지시로 지난 배분 테스트·권한 분리 안내·작업 기록 3개 파일을 5a9cea9(테스트: 배분 재요청과 취소 후 원본 보존 검수 추가)로 커밋했다. 푸시는 요청 범위에 포함하지 않았다. 클라우드 DB 계정·비밀번호 설정 파일은 저장소 밖에 유지했다.
+
+다음 검수로 CommandKey+Api에 모의 서버를 넣은 메모리 경계 진단을 실행했다. 응답 유실 후 같은 객체로 재요청하면 모의 입금1건, 새 CommandKey 객체로 같은 입력을 보내면 다른 키가 생성돼 모의 입금2건이 됐다. 실제 앱/휴대폰 종료·시작이나 Java와 연결된 클라이언트 재현이 아니다. 실제 서버 동작은 기존 ReceivablesRegistrationIntegrationTest.normalizedIdempotentReplaysReturnOriginalAndKeysAreScopedByOperationAndTenant 1개를 전용 reconciliation_test/chagok_test로 실행해 통과(실패·오류·스킵0、12초) 확인했다. 테스트 전 비관리자·개발 CONNECT 차단을 재확인했다. 모바일 npm test13개 통과. 금액·날짜만으로 중복 삭제하면 정상 별도 입금을 훼손하므로 서버 정책은 변경하지 않았다.
+
+요청 키·입력 복구를 위한 저장 방식 대안·영향·완료 기준을 ADR0002의 승인 전 제안으로 정리했다. 민감한 입력의 기기/브라우저 보관 정책이 바뀌므로 사용자 결정 전에는 기능 구현하지 않는다. 새 라이브러리·마이그레이션·유료 API·외부 배포 없음. 이번 조사 문서는 지난 작업 커밋 이후 미커밋 상태로 남긴다.
+
+
+## 2026-11-12 입금 등록 재시작 복구 구현·검증
+
+사용자가 요청 키·입력 보관 후 명시적 재전송 방식의 입금 등록 복구 구현을 승인했다. PendingPaymentRecovery와 플랫폼 저장 어댑터를 추가하고 App/Registration에 연결했다. 전송 전에 불변 키·입력을 보관하고 저장 실패는 POST 이전에 거절한다. 서버 origin·계정·사업체로 격리하며 저장 대기 중 계정이 바뀌면 expectedEpoch로 전송을 차단한다. 미확인 요청은 임의 삭제·자동 재시도하지 않고 사용자 확인 버튼으로만 원래 키·내용을 재전송한다. 성공 응답 후 보관 정리를 완료해야 새 입금을 허용한다.
+
+Native는 SecureStore 단일 항목1800바이트 상한, Web은 IndexedDB 트랜잭션을 사용한다. Web 입력 원문은 앱 자체 암호화가 없으며 토큰은 보관하지 않는다. 보관·삭제·사이트 데이터 삭제 시 한계를 UI/모바일 README/ADR에 명시했다. 청구·배분·취소·후보의 영속 복구는 범위 밖이다. 새 라이브러리·서버 API·마이그레이션·제품 금액 계산 변경 없음.
+
+독립 검토에서 ISO 제어문자를 저장한 뒤 서버400으로 복구가 막히는 경로를 발견해 저장 전 검증을 서버와 맞추고 회귀 테스트를 추가했다. 코드포인트 길이와 키 형식도 일치시켰다. 재검토에서 추가 결함 없음. 타입 검사 통과, npm test: 기존·세션14개+복구12개=26개 통과.
+
+로컬 Java8091/Expo8081을 reconciliation_test/chagok_test로 실행하고 scripts/verify-payment-recovery-browser.py의 실제 Chromium5개 시나리오를 통과했다. 실제 서버가 입금을 저장한 뒤 응답만503으로 바꾸고, Chromium 프로세스·컨텍스트를 닫아 동일 디스크 프로필로 재시작했다. 다른 계정에는 미확인 카드가 없고 원래 계정에만 복구됐으며 자동 POST는0회였다. 명시적 재전송은 원래 키·본문과 같고 실제 payment1건/40000원 유지, 성공 후 IndexedDB0건, 저장소 차단 시 등록 버튼 비활성·POST0회, 페이지 오류0을 확인했다. 320px 화면 버튼 줄바꿈을 다듬었다. 문구 수정 후 최초 재실행은 CI Expo의 이전 번들 때문에 버튼 검색이 실패했으며 캐시 초기화·서버 재시작 후 최종5개를 다시 통과했다. Chromium은 샌드박스 밖 기존 시스템 설치본을 사용했으며 새 설치는 하지 않았다.
+
+기존 scripts/verify-receivables-mobile-browser.py를 새 복구 버튼 흐름에 맞춰 갱신하고 기존9개 회귀도 통과(페이지 오류0)했다. 가입·거래처·청구·잔액·입금 복구·사용량·세션 만료·샘플 API0회·반응형을 확인했다. 모든 검증은 새 합성 계정만 생성·정리했으며 개발 DB는 사용하지 않았다. 캡처는 저장소 밖 /workspace/.local/run/payment-recovery-tgdjhvu5 및 payment-recovery-core-regression에 두었다.
+
+명령: mobile에서 npm test / npm run typecheck. 루트에서 source /workspace/.local/env.sh 후 python3 scripts/verify-payment-recovery-browser.py, CHROMIUM_PATH=/usr/bin/chromium python3 scripts/verify-receivables-mobile-browser.py --screenshots /workspace/.local/run/payment-recovery-core-regression. iOS·Android SecureStore 실제 저장/재시작·전체 백엔드 회귀·유료 모델·외부 배포·Supabase는 미실행이다. 기능 코드 직접 검토는 사용자에게 남아 있으며, 이번 구현은 커밋·푸시하지 않았다.
+
+## 2026-11-13 Docker 2-A 구현·검증
+
+사용자의 2-A 구현·검증 승인으로 정리 브랜치 d457bff에서 chore/docker-local을 만들고, 입금 복구 1760458의 기능 변경을 미커밋 상태로 통합했다. 두 원래 브랜치와 main의 이력은 유지했다. 구현 담당과 독립 검토 담당을 분리했다. 이번 단계에서 커밋·푸시하지 않는다.
+
+backend-java/Dockerfile·.dockerignore, compose.yaml, docker/의 기동·초기화·헬스 체크·빌드 보조 파일, scripts/setup-docker-secrets.py, .gitattributes를 추가했다. .gitignore와 백엔드 README에 비밀 파일 제외·실행 문서 링크를 추가했다. Java 21 런타임과 PostgreSQL 17 개발/테스트 서비스의 계정·네트워크·볼륨을 분리하고 기존 업무 소스·금액 계산·인증·Flyway V1~V13·TestDatabaseIsolation을 유지했다. AI 키는 비우고 제품 AI 기능은 차단 상태를 유지한다.
+
+최초 파일 읽기 권한 오류를 수정한 뒤 두 이미지 빌드 성공, Docker 테스트 197개 통과(실패·오류·스킵0), 양쪽 DB Flyway13개 성공을 확인했다. 실제 HTTP에서 가입·로그인·청구100000·입금40000·배분40000·미수금60000, 같은 입금 요청 키 재전송 후1건, 비인증401을 확인했다. 정상 종료·재시작 및 backend/db-dev 컨테이너 재생성 후 같은 데이터를 확인했다. 새 빈 테스트 볼륨 자동 초기화도 통과했다. 개발 DB에 대한 테스트 네트워크 TCP 차단, 실제 Java UID10001, 앱 DB 역할 비관리자 권한, 확인한 로그·설정의 비밀번호 미노출을 검증했다. 기존 DB/볼륨 삭제는 없다.
+
+명령·운영 절차·최초 실패와 복구·실측 한계는 DOCKER_LOCAL.md에 모았다. 증거는 저장소 밖 /workspace/.local/run/docker-2a에 보관하고 테스트 컨테이너는 중지했다. 독립 정적 재검토에서 추가 차단 결함은 없었다. 최종 문서와 검증 JSON·XML을 별도로 대조한 검토에서도 197개 결과와 완료/미검증 구분이 일치했다. 2-A 종료 시 사용자 PC Docker Desktop/WSL, 웹 컨테이너·브라우저, 운영 백업 복원·CI/CD·배포·유료 모델은 미검증이었다. 후속 웹 작업은 다음 기록과 구분한다.
+
+## 2026-11-13 Docker 2-B 웹 연결
+
+사용자의 후속 진행 지시에 따라 기존 Expo 웹을 Node24에서 정적 빌드하고 nginx로 제공하는 구성을 추가했다. 구현과 독립 검토를 분리했다. 변경은 mobile/Dockerfile·.dockerignore, docker/web.conf, compose.yaml의 web 서비스와 실행 안내 문서다. localhost:18080에서 화면과 API를 함께 제공하고 backend Host 포트·인증 오류·업로드 제한을 유지한다. DB 마이그레이션과 제품 Java·모바일 업무 코드는 변경하지 않았다.
+
+별도 chagok-2b-check 프로젝트의 전용 reconciliation_test/chagok_test에 연결해 기존 브라우저9개 시나리오를 데스크톱 중심으로 실행했다. 가입·등록·입금 응답 유실 복구·미연결 입금과 미수금 구분·사용량·세션 만료가 모두 통과하고 페이지 오류0이다. 샘플 API0회, HTTP 프록시·정적 파일·7MiB 초과 거절7개도 확인했다. 실제 nginx UID101, backend 재생성 후 프록시 응답 복구, 기본 localhost:18080 화면도 확인했다. 테스트 계정만 정리하고 테스트 서비스는 중지했으며 볼륨은 보존했다. 개발 서비스는 실행 중이다.
+
+최초 세션 만료 검증의 화면 클릭 경합은 기존 verify-receivables-mobile-browser.py에서 계정 화면·네트워크 완료를 기다리도록 수정했다. 최초 health 프로브의 프록시403은 loopback wget에만 -Y off를 적용해 해결했다. 수정 후9개 전체 통과 및 양쪽 web healthy를 확인했다. 독립 재검토에서도 추가 차단 문제는 없었다. 2-A의 전체 Java197개 결과는 코드 변경이 없어 재사용했다.
+
+검증용 override·스크립트 사본·로그·캡처는 저장소 밖 /workspace/.local/run/docker-2b에 보관했다. 실행 방법과 미검증 범위는 DOCKER_LOCAL.md를 따른다. 사용자 PC Docker/재부팅·실기기·운영 복구·CI/CD·배포는 미검증이다. 현재 chore/docker-local의 작업을 커밋·푸시하거나 main을 변경하지 않았다. 사용자 검토 후 커밋 여부 및 다음 CI 단계 승인이 필요하다.
+
+## 2026-11-15 PC 실행 전 CI 사전 분석
+
+사용자가 PC 실행 전에 가능한 작업을 요청해 Git 상태·Gradle·테스트 datasource·격리 가드·workflow 유무를 확인했다. chore/docker-local/d457bff와 기존 미커밋 변경은 보존했다. .github/workflows는 없으며 Java21·wrapper9.7.1·전용 reconciliation_test로 기존 테스트를 재사용할 수 있다. Flyway Gradle 플러그인은 없어 별도 flywayValidate 명령을 전제하지 않았다.
+
+CI_PLAN.md에 PR/수동 실행·읽기 권한·임시 PostgreSQL17·비관리자 앱 역할·Java build/test·Flyway 이력·결과 업로드·독립 검토의 구현안을 기록했다. 실제 GitHub Actions 검증은 푸시 승인 이후로 구분했다. 사전 분석에서는 기존 테스트를 반복 실행하지 않았고 workflow·업무 코드·DB·커밋·푸시는 변경하지 않았다. 이후 사용자 구성 승인에 따른 구현은 다음 기록으로 구분한다.
+
+## 2026-11-15 CI 구현·클라우드 검증
+
+사용자가 CI 구성안을 승인해 .github/workflows/ci.yml 및 scripts/ci/init-test-db.sh·verify-flyway.py·summarize-tests.py를 추가했다. 기존 작업 브랜치와 미커밋 변경을 보존했고 Java 업무 소스·마이그레이션·격리 가드는 변경하지 않았다. PR/수동 실행·읽기 권한·공식 SHA 고정·일회성 PG17·비관리자 앱 역할·실제 종료 코드와 XML/Flyway 요약·실패 시에도 artifact 보존을 구성했다. setup-gradle의 외부 상용 캐시 대신 basic을 명시하고 build scan·dependency graph를 껐다. 실제 AI 키·운영 DB 자격증명·배포 단계는 추가하지 않았다.
+
+새 Docker PostgreSQL17.12/호스트25432/전용 볼륨에서 초기화·CI 아님·원격 호스트·기본 포트·개발 DB 이름·재실행 거절과 역할 권한을 확인했다. 기존 개발·테스트 DB는 사용하지 않았다. 클라우드 기본 Java가 JRE여서 첫 빌드가 실패했고 기존 Java21.0.12.1 JDK 경로를 명시한 뒤 clean build 성공(종료0,1분1초), 전체197개/23 suite·실패0·오류0·스킵0, Flyway13개 성공을 확인했다. 같은 wrapper9.7.1 명령에 클라우드 캐시용 offline·JDK/project-cache 경로만 추가했다.
+
+실제 Spring 통합 테스트1개에 잘못된 DB 이름을 주고 별도 출력 경로에서 실행해 JDBC 연결 전 거절(예상 종료1)을 확인했다. 정상 전체 XML은 별도 보존했다. actionlint1.7.7·구문 검사·helper의 정상/누락/실패/파손 결과 검증도 통과했다. 구현 담당과 다른 에이전트가 코드 및 실제 전체 XML·빌드·Flyway 결과를 대조했고 차단 문제는 없었다. 검증 로그의 생성 비밀번호 미노출을 확인하고 검증용 DB를 중지했으며 볼륨은 보존했다.
+
+구성과 실제 검증 범위는 CI_PLAN.md, 증거는 저장소 밖 /workspace/.local/run/ci-validation-20261115와 /workspace/.local/ci-implementation-checks-20261115.md에 보관했다. 실제 GitHub Actions runner·wrapper 검증 Action·캐시·다운로드·artifact 업로드·PR 상태는 미검증이다. 사용자 PC 실행도 별도로 남아 있다. 커밋·푸시·PR 생성·배포는 수행하지 않았고 사용자 검토와 별도 승인이 필요하다.
+
+## ERP P0 — 업무 계약과 경계 검수
+
+사용자의 ERP 방향 재정립 및 순차 구현·단계별 커밋 지시에 따라 AGENTS의 목표/역할과 ADR0003을 정리했다. 기존 asOf는 현재 장부의 연체 기준일, 수동 대납/다른 날짜 허용, batch 전체 취소와 원본 보존 계약을 유지했다. 미래 청구의 현재 잔액과 연체 시작일, 다거래처 batch 취소 후 모든 잔액/원본 복원을 테스트2개로 보강했다. 제품 코드·마이그레이션 변경은 없다.
+
+새 PostgreSQL17 전용25433/reconciliation_test/chagok_test에서 AllocationIntegrationTest20개 통과(실패·오류·스킵0,25초). 독립 검토에서 차단 문제 없음. 기존 입금 복구·Docker·CI 미커밋 변경은 이 단계와 분리해 보존했다. 사용자 승인 범위에 따라 P0만 커밋하며 푸시는 하지 않는다. 증거는 저장소 밖 /workspace/.local/run/ar-erp-validation/p0에 보관한다.
+
+## ERP P1 — 청구 오입력 취소·대체 등록
+
+사용자가 승인한 순차 구현의 최소 권장안으로 청구 원본 보존·활성 배분이 있으면 취소 거절·현재 시각의 취소 사실·새 번호/UUID로 대체 등록을 구현했다. V14와 tenant 복합 FK·취소 명령 멱등성·원문당 대체1건 연결을 추가하고 기존 V1~V13과 원본 invoice 응답을 보존했다. 선택 replacesInvoiceId가 없으면 기존5필드 직렬화로 등록 키 해시를 유지한다. 취소와 배분 확정은 같은 invoice 잠금 후 별도 SQL로 상태를 재확인한다. 취소 청구는 새 배분·후보·현재 합계에서 제외하고 개별 잔액은 CANCELLED/미수0으로 반환한다. 손상된 활성 배분은503으로 감지한다. 기존 웹 타입과 상태 문구도 CANCELLED를 지원한다.
+
+새 PostgreSQL17 전용25433에서 대상64개·전체215개(기존197+P0추가2+P1추가16), 실패·오류·스킵0. 전체 build1분6초/종료0, Flyway14개 성공을 확인했다. 모바일 기존26개 테스트와 타입 검사 통과. 최초 타입 검사는 미설치 의존성으로 실행 불가였고 기존 lockfile 의존성만 설치한 후 통과했다. 독립 코드 검토 및 전체 XML 대조에서 차단 문제 없음. 병렬 테스트는 결과 불변식 검증이며 특정 잠금 대기 순서를 강제하지 않는다. 외부 모델·개발 DB·공개 배포·푸시는 사용하지 않았다. 증거: 저장소 밖 ar-erp-validation/p1-*.
+
+## ERP P3 — 거래처별 현재 채권 명세와 연체 구간 조회
+
+승인된3순위로 GET tenant/receivables/ledger와 읽기 전용 QueryService를 추가했다. 거래처·상태·기한·문자 검색, 지급기한/UUID 순 페이지와 필터 전체 합계, 현재 미수의 연체 구간을 제공한다. 취소 청구는 제외하고 손상된 배분은 필터 뒤에 숨기지 않고503으로 거절한다. asOf는 현재 잔액의 연체 기준일이며 과거 잔액 조회가 아니다. 구간 선호는 별도 문의했으나 응답 전 권장 조회 기본값(기한 전/당일·1~30·31~60·61~90·91일 이상)을 적용했다. 사용자 확정 정책으로 소급하지 않으며 새 명세 화면은 범위 밖이다.
+
+신규5개 통합 시나리오와 최종 전체220개/25 suite 통과(실패·오류·스킵0,build종료0,1분12초), Flyway14개 성공을 확인했다. totals와page 사이 별도 배분 확정을 실제 commit시켜 같은 응답의snapshot과 다음 조회의새잔액을 확인했다. 최초literal검색 테스트의 퍼센트 이중인코딩을 MockMvc param 입력으로 수정한 뒤 통과했다. 완납 문서는 현재 연체일0/SETTLED로 정리하고 재검증했다. 실제 최종JAR HTTP에서 반제취소→청구취소→대체60000등록→입금40000재배분→미수20000/31~60구간20000을 확인했고 원본보존·멱등·401/403·literal검색도 통과했다. 생성한 검증 계정만 정리했다. 독립 코드/문서 검토와 최종XML 대조에서 차단 문제 없음.
+
+증거는 저장소 밖 /workspace/.local/run/ar-erp-validation/p3-final 및 http-summary.json에 보관했다. 기존 V1~V13·개발 DB·유료 모델은 변경/사용하지 않았다. 새 API와 원장 SQL만 추가했으며 이번3개 단계 커밋에 기존 입금 복구·Docker·CI 미커밋 작업을 섞지 않았다. 푸시·배포·실제 GitHub Actions·사용자PC 실행은 하지 않았다.

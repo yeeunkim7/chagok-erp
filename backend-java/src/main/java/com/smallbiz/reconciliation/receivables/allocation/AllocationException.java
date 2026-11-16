@@ -11,5 +11,6 @@ final class AllocationException extends RuntimeException {
     static AllocationException exceeded() { return new AllocationException("ALLOCATION_EXCEEDS_AVAILABLE", 409, "The allocation exceeds the available amount."); }
     static AllocationException conflict() { return new AllocationException("IDEMPOTENCY_CONFLICT", 409, "The idempotency key was used for another request."); }
     static AllocationException cancelled() { return new AllocationException("ALLOCATION_ALREADY_CANCELLED", 409, "The allocation has already been cancelled."); }
+    static AllocationException invoiceCancelled() { return new AllocationException("INVOICE_CANCELLED", 409, "The invoice has been cancelled."); }
     static AllocationException invariant() { return new AllocationException("ALLOCATION_STORAGE_UNAVAILABLE", 503, "Allocation storage is unavailable."); }
 }

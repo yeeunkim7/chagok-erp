@@ -11,7 +11,15 @@ import java.util.UUID;
 final class RegistrationInput {
     private RegistrationInput() {}
     record Counterparty(String code, String name) {}
-    record Invoice(UUID counterpartyId, String invoiceNumber, long amount, LocalDate issueDate, LocalDate dueDate) {}
+    record Invoice(UUID counterpartyId, String invoiceNumber, long amount, LocalDate issueDate, LocalDate dueDate,
+            UUID replacesInvoiceId) {
+        Object hashInput() {
+            // Existing request hashes were serialized with exactly these five fields.
+            return replacesInvoiceId == null
+                    ? new OriginalInvoice(counterpartyId, invoiceNumber, amount, issueDate, dueDate) : this;
+        }
+    }
+    private record OriginalInvoice(UUID counterpartyId, String invoiceNumber, long amount, LocalDate issueDate, LocalDate dueDate) {}
     record Payment(long amount, LocalDate bookedDate, String payerName, String note) {}
 
     static Counterparty counterparty(Map<String, Object> body) {
@@ -21,11 +29,12 @@ final class RegistrationInput {
         return new Counterparty(code.toUpperCase(Locale.ROOT), text(body, "name", 100, true));
     }
     static Invoice invoice(Map<String, Object> body) {
-        fields(body, Set.of("counterpartyId", "invoiceNumber", "amount", "issueDate", "dueDate"));
+        fields(body, Set.of("counterpartyId", "invoiceNumber", "amount", "issueDate", "dueDate", "replacesInvoiceId"));
         UUID counterparty = uuid(body.get("counterpartyId"));
         LocalDate issue = date(body.get("issueDate")), due = date(body.get("dueDate"));
         if (due.isBefore(issue)) throw ReceivablesException.invalid();
-        return new Invoice(counterparty, text(body, "invoiceNumber", 64, true), money(body.get("amount")), issue, due);
+        UUID replaces = body.get("replacesInvoiceId") == null ? null : uuid(body.get("replacesInvoiceId"));
+        return new Invoice(counterparty, text(body, "invoiceNumber", 64, true), money(body.get("amount")), issue, due, replaces);
     }
     static Payment payment(Map<String, Object> body) {
         fields(body, Set.of("amount", "bookedDate", "payerName", "note"));

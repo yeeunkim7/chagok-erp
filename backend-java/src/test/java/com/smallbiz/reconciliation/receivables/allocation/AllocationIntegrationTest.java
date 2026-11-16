@@ -107,6 +107,41 @@ class AllocationIntegrationTest {
         assertThat(count(owner, "receivable_allocation_audit")).isEqualTo(2);
     }
 
+    @Test void asOfClassifiesOverdueWithoutReconstructingHistoricalBalancesEvenForFutureInvoices() throws Exception {
+        Owner owner = owner();
+        var cp = postJson(owner, "counterparties", "future-cp", Map.of("code", "FUTURE", "name", "미래 청구 거래처"), 201);
+        var future = postJson(owner, "invoices", "future-invoice", Map.of("counterpartyId", id(cp),
+                "invoiceNumber", "FUTURE-2027", "amount", "100000", "issueDate", "2027-01-01", "dueDate", "2027-01-31"), 201);
+        var paid = payment(owner, "40000");
+        confirm(owner, "advance-payment", List.of(line(paid, future, "40000")), "청구 전 입금 수동 검토");
+        var earlier = summary(owner, "2020-01-01");
+        assertMoney(earlier, "invoiceAmount", "100000", "paymentAmount", "40000", "allocatedAmount", "40000",
+                "outstandingAmount", "60000", "overdueAmount", "0");
+        assertThat(earlier.path("allocationState").asText()).isEqualTo("CURRENT");
+        assertMoney(invoiceBalance(owner, future, "2020-01-01"), "outstandingAmount", "60000", "overdueAmount", "0");
+        assertMoney(summary(owner, "2027-01-31"), "overdueAmount", "0");
+        assertMoney(summary(owner, "2027-02-01"), "overdueAmount", "60000");
+    }
+
+    @Test void cancellingCrossCounterpartyBatchReleasesEveryLineButNeverDeletesInvoiceOrPaymentOriginals() throws Exception {
+        Owner owner = owner();
+        var first = invoice(owner, "30000", "2026-11-01");
+        var second = invoice(owner, "70000", "2026-11-01");
+        assertThat(first.path("counterpartyId")).isNotEqualTo(second.path("counterpartyId"));
+        var paid = payment(owner, "100000");
+        var batch = confirm(owner, "third-party", List.of(line(paid, first, "30000"), line(paid, second, "40000")), null);
+        assertMoney(summary(owner, "2026-11-02"), "outstandingAmount", "30000", "unallocatedAmount", "30000");
+        cancel(owner, batch, "whole-batch", "오배분 묶음 전체 취소");
+        assertMoney(invoiceBalance(owner, first, "2026-11-02"), "outstandingAmount", "30000");
+        assertMoney(invoiceBalance(owner, second, "2026-11-02"), "outstandingAmount", "70000");
+        assertMoney(paymentBalance(owner, paid), "unallocatedAmount", "100000");
+        assertThat(getJson(owner, "invoices/" + id(first))).isEqualTo(first);
+        assertThat(getJson(owner, "invoices/" + id(second))).isEqualTo(second);
+        assertThat(getJson(owner, "payments/" + id(paid))).isEqualTo(paid);
+        assertThat(count(owner, "receivable_allocation_line")).isEqualTo(2);
+        assertThat(count(owner, "receivable_allocation_cancellation")).isEqualTo(1);
+    }
+
     @Test void partialPaymentsCompleteInvoiceAndCancellationRestoresExactBalancesAndAudit() throws Exception {
         Owner owner = owner();
         var invoice = invoice(owner, "100000", "2026-11-01");

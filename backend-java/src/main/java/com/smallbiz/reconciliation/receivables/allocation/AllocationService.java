@@ -114,7 +114,9 @@ public class AllocationService {
         tenants.require(tenant);
         LocalDate cutoff = date(asOf);
         var rows = jdbc.query("""
-                SELECT i.amount,i.due_date,coalesce(sum(l.amount) FILTER (WHERE c.id IS NULL),0) AS allocated
+                SELECT i.amount,i.due_date,coalesce(sum(l.amount) FILTER (WHERE c.id IS NULL),0) AS allocated,
+                    EXISTS (SELECT FROM receivable_invoice_cancellation ic
+                            WHERE ic.tenant_id=i.tenant_id AND ic.invoice_id=i.id) AS cancelled
                 FROM receivable_invoice i
                 LEFT JOIN receivable_allocation_line l ON l.tenant_id=i.tenant_id AND l.invoice_id=i.id
                 LEFT JOIN receivable_allocation_cancellation c ON c.tenant_id=l.tenant_id AND c.batch_id=l.batch_id
@@ -122,11 +124,13 @@ public class AllocationService {
                 """, (rs, row) -> {
                     BigInteger original = rs.getBigDecimal("amount").toBigIntegerExact();
                     BigInteger allocated = rs.getBigDecimal("allocated").toBigIntegerExact();
-                    BigInteger remaining = remainder(original, allocated);
+                    boolean cancelled = rs.getBoolean("cancelled");
+                    if (cancelled && allocated.signum() != 0) throw AllocationException.invariant();
+                    BigInteger remaining = cancelled ? BigInteger.ZERO : remainder(original, allocated);
                     LocalDate due = rs.getObject("due_date", LocalDate.class);
                     return new InvoiceBalance(invoice, tenant, original.toString(), allocated.toString(), remaining.toString(),
                             due.isBefore(cutoff) ? remaining.toString() : "0", due, cutoff,
-                            allocated.signum() == 0 ? "UNPAID" : remaining.signum() == 0 ? "PAID" : "PARTIAL");
+                            cancelled ? "CANCELLED" : allocated.signum() == 0 ? "UNPAID" : remaining.signum() == 0 ? "PAID" : "PARTIAL");
                 }, tenant, invoice);
         return one(rows);
     }
@@ -159,7 +163,9 @@ public class AllocationService {
                 ), inv AS (
                     SELECT i.amount,i.due_date,coalesce(sum(a.amount),0) AS allocated
                     FROM receivable_invoice i LEFT JOIN active a ON a.invoice_id=i.id
-                    WHERE i.tenant_id=? GROUP BY i.id
+                    WHERE i.tenant_id=? AND NOT EXISTS (
+                        SELECT FROM receivable_invoice_cancellation ic WHERE ic.tenant_id=i.tenant_id AND ic.invoice_id=i.id
+                    ) GROUP BY i.id
                 ), pay AS (
                     SELECT p.amount,coalesce(sum(a.amount),0) AS allocated
                     FROM receivable_payment p LEFT JOIN active a ON a.payment_id=p.id
@@ -175,13 +181,15 @@ public class AllocationService {
                     (SELECT coalesce(sum(amount),0) FROM pay) AS payment_amount,
                     (SELECT coalesce(sum(amount-allocated),0) FROM pay) AS unallocated,
                     (SELECT count(*) FROM inv WHERE allocated<0 OR allocated>amount) +
-                    (SELECT count(*) FROM pay WHERE allocated<0 OR allocated>amount) AS invalid
+                    (SELECT count(*) FROM pay WHERE allocated<0 OR allocated>amount) +
+                    (SELECT count(*) FROM active a JOIN receivable_invoice_cancellation ic
+                        ON ic.tenant_id=? AND ic.invoice_id=a.invoice_id) AS invalid
                 """, (rs, row) -> {
                     if (rs.getLong("invalid") != 0) throw AllocationException.invariant();
                     return new Summary(tenant, cutoff, "CURRENT", rs.getLong("invoice_count"), rs.getLong("payment_count"),
                             rs.getLong("active_line_count"), integer(rs, "invoice_amount"), integer(rs, "allocated_amount"),
                             integer(rs, "outstanding"), integer(rs, "overdue"), integer(rs, "payment_amount"), integer(rs, "unallocated"));
-                }, tenant, tenant, tenant, cutoff);
+                }, tenant, tenant, tenant, cutoff, tenant);
     }
 
     private Command reserve(UUID tenant, String operation, String key, Object input) {
@@ -203,6 +211,13 @@ public class AllocationService {
     }
     private void lockAndValidate(UUID tenant, List<AllocationInput.Line> lines) {
         var parents = lockParents(tenant, lines);
+        // A separate statement AFTER parent locking sees a cancellation that committed
+        // while FOR UPDATE was waiting. Never perform this check before the lock.
+        for (UUID invoice : parents.invoices().keySet()) {
+            if (Boolean.TRUE.equals(jdbc.queryForObject("""
+                    SELECT EXISTS (SELECT FROM receivable_invoice_cancellation WHERE tenant_id=? AND invoice_id=?)
+                    """, Boolean.class, tenant, invoice))) throw AllocationException.invoiceCancelled();
+        }
         Map<UUID, Long> payments = new HashMap<>(), invoices = new HashMap<>();
         for (var line : lines) {
             payments.merge(line.paymentId(), line.amount(), Math::addExact);
