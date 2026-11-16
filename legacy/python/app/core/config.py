@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 # 프로젝트 루트 기준 SQLite 파일 경로 (예: ./accounting.db)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parents[4]
 DEFAULT_SQLITE_PATH = BASE_DIR / "accounting.db"
 
 # 환경변수로 DATABASE_URL을 오버라이드할 수 있고,

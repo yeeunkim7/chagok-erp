@@ -267,15 +267,15 @@ CSV 업로드는 multipart 요청의 `file` 필드를 사용합니다. CSV 헤�
 | [`backend-java/`](../backend-java) | 현재 개발 중인 Spring Boot 앱 |
 | [`backend-java/README.md`](../backend-java/README.md) | 실행 환경, 샘플 CSV, API 호출 예시 |
 | [`backend-java/docs/design.md`](../backend-java/docs/design.md) | CSV 형식과 집계·검토 규칙 |
-| [`app/`](../app) | 별도로 작성한 FastAPI 전표 실험 코드 |
-| [`migrations/`](../migrations) | FastAPI 실험용 DB 스키마 |
+| [`app/`](../legacy/python/app) | 별도로 작성한 FastAPI 전표 실험 코드 |
+| [`migrations/`](../legacy/python/migrations) | FastAPI 실험용 DB 스키마 |
 | [`docs/legacy-erd.md`](legacy-erd.md) | 초기 전표 중심 설계 |
 
-FastAPI 실험 코드는 루트의 SQLite `accounting.db`를 사용하며, Java 앱과 프로세스·데이터베이스를 공유하지 않습니다. 이 DB는 로컬 전용이며 Git에서 제외합니다. [기존 DB 보존과 빈 DB 초기화](../migrations/README)를 확인하세요. `docs/legacy-erd.md` 역시 현재 Java 스키마와는 별도의 초기 설계 문서입니다.
+FastAPI 실험 코드는 저장소 루트의 SQLite `accounting.db`를 사용하며, Java 앱과 프로세스·데이터베이스를 공유하지 않습니다. 이 DB는 로컬 전용이며 Git에서 제외합니다. [기존 DB 보존과 빈 DB 초기화](../legacy/python/migrations/README)를 확인하세요. `docs/legacy-erd.md` 역시 현재 Java 스키마와는 별도의 초기 설계 문서입니다.
 
 ## 읽기 전용 하루 AI 검토
 
-당시 추가한 조회·화면과 도구 연결의 [실행·검증 이력](ai-review-running.md)을 보존합니다. 현재 모델 실행은 모든 등급에서 차단되며, PRO의 tenant 전용 도구 구현과 별도 검증이 필요합니다.
+당시 추가한 조회·화면과 도구 연결의 [실행·검증 이력](ai/ai-review-running.md)을 보존합니다. 현재 모델 실행은 모든 등급에서 차단되며, PRO의 tenant 전용 도구 구현과 별도 검증이 필요합니다.
 
 ## 계정·사업체 보안 기반
 
@@ -291,4 +291,4 @@ FastAPI 실험 코드는 루트의 SQLite `accounting.db`를 사용하며, Java 
 
 ## 규칙 기반 검토 후보
 
-[후보 API](RECEIVABLES_MATCHING.md), [CSV 가져오기](RECEIVABLES_IMPORT.md), [월별 성공 실행 한도](RECEIVABLES_USAGE.md), [모바일 연결](RECEIVABLES_MOBILE_MATCHING.md)에 현재 계약을 모았습니다. 각 기능의 추가 순서와 과거 검증 결과는 [작업 이력](AI_REVIEW_WORK.md)에 보존합니다.
+[후보 API](RECEIVABLES_MATCHING.md), [CSV 가져오기](RECEIVABLES_IMPORT.md), [월별 성공 실행 한도](RECEIVABLES_USAGE.md), [모바일 연결](RECEIVABLES_MOBILE_MATCHING.md)에 현재 계약을 모았습니다. 각 기능의 추가 순서와 과거 검증 결과는 [작업 이력](ai/AI_REVIEW_WORK.md)에 보존합니다.

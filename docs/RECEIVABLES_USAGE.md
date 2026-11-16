@@ -47,4 +47,4 @@ retry 시간은 응답 시점의 서버 DB 승인 시각과 reset 차이에 따�
 
 ## 검증
 
-전용 `reconciliation_test`의 실제 PostgreSQL과 보안 필터로 월 경계·동시성·원자성·인증을 검증한다. 테스트는 자기 tenant의 V13 event/월 → V11 run → V12/V10/V9 → identity 순으로 정리하며 기존 matching 테스트도 새 FK의 자기 사용량 행만 먼저 정리한다. 테스트 모델/query mock 호출은 0이며 실제 유료 API는 호출하지 않는다. 최종 검증 결과는 [작업 기록](AI_REVIEW_WORK.md)과 [HTTP 검증](RECEIVABLES_USAGE_SMOKE.md)에 기록한다.
+전용 `reconciliation_test`의 실제 PostgreSQL과 보안 필터로 월 경계·동시성·원자성·인증을 검증한다. 테스트는 자기 tenant의 V13 event/월 → V11 run → V12/V10/V9 → identity 순으로 정리하며 기존 matching 테스트도 새 FK의 자기 사용량 행만 먼저 정리한다. 테스트 모델/query mock 호출은 0이며 실제 유료 API는 호출하지 않는다. 최종 검증 결과는 [작업 기록](ai/AI_REVIEW_WORK.md)과 [HTTP 검증](RECEIVABLES_USAGE_SMOKE.md)에 기록한다.

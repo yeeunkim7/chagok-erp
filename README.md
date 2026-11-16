@@ -63,7 +63,7 @@ npm run typecheck
 
 Codex를 활용해 개발했습니다. 개발자가 서비스 목표·업무 규칙·범위·완료 기준을 정하고, 총괄 에이전트가 기획·분석, 자료조사, 디자인, 개발, 독립 검토 작업을 배분했습니다. 코드 구현과 테스트 실행에는 AI를 활용했습니다. 세부 설계 중 개발자의 직접 선택이 확인되지 않는 사항은 구현 사실과 구분합니다.
 
-[개발자 결정 및 검토 절차](AGENTS.md) · [작업 이력](docs/AI_REVIEW_WORK.md)
+[개발자 결정 및 검토 절차](AGENTS.md) · [작업 이력](docs/ai/AI_REVIEW_WORK.md)
 
 개발 후에는 개인 PC의 Hermes에 Python 조회 도구를 연결해 실제 Java API의 미수 요약을 설명하는 실습을 진행했습니다. 제품 FREE 기능과 분리된 합성 자료 실습입니다. [소스와 확인 범위](examples/hermes/chagok-local-api)
 

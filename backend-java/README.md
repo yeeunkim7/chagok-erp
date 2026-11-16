@@ -125,7 +125,7 @@ finally {
 
 ## 합성 CSV 예제
 
-위치: [`docs/examples/`](docs/examples/). `backend-java`를 작업 디렉터리로 두고 아래 순서로 호출합니다. 아래 curl 호스트는 8082 기준입니다.
+위치: [`docs/examples/`](docs/examples). `backend-java`를 작업 디렉터리로 두고 아래 순서로 호출합니다. 아래 curl 호스트는 8082 기준입니다.
 
 1. 선불·후불 거래처를 등록합니다 (`V-PRE-01`, `V-POST-01`). JSON은 현재 디렉터리의 파일로 보냅니다.
 2. `docs/examples/business-valid.csv`를 업무 업로드합니다. 따옴표 안 비고는 `business-quoted-note.csv`입니다.

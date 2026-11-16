@@ -8,9 +8,10 @@ app/과 migrations/는 과거 FastAPI 실험 코드다. 현재 Java 백엔드의
 
 ## 빈 DB로 스키마 확인
 
-저장소 루트에서 실행한다. 기존 DB를 건드리지 않도록 새 임시 폴더를 사용한다.
+저장소의 `legacy/python/`에서 실행한다. 기존 DB를 건드리지 않도록 새 임시 폴더를 사용한다.
 
 ```sh
+cd legacy/python
 python3 -m venv .venv
 .venv/bin/python -m pip install 'SQLAlchemy==2.1.8' 'alembic==1.20.1'
 DB_CHECK_DIR=$(mktemp -d)
