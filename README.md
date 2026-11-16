@@ -4,6 +4,7 @@
 
 ## 개발 배경
 
+회계·정산 실무에서 원장 대조와 중복 업로드 문제를 겪은 경험에서 출발했습니다.
 기존 날짜별 입출금 대사를 청구별 수금 관리로 확장했습니다. 합계가 같아도 어느 청구가 결제됐는지는 별도 확인이 필요합니다.
 중복 업로드·재요청은 입금을 중복 등록할 수 있고, 정정 과정의 덮어쓰기는 원본 근거를 잃게 합니다.
 차곡은 후보 조회와 사람의 확정을 분리하고, Java·DB가 금액을 계산하며 원본과 취소 이력을 보존하도록 구현했습니다.
@@ -12,17 +13,17 @@
 
 | 역할 | 책임 |
 | --- | --- |
-| 개발자 | 업무 방향·범위·승인 기준 결정, 최종 코드 확인 |
+| 개발자 | 업무 규칙·범위·승인 기준 결정, 핵심 코드 경로 확인, 업무 시나리오 수동 검증 |
 | Codex 총괄 | 기존 코드 분석, 작업·파일 범위 배분, 실행 근거 통합 |
 | 구현 에이전트 | 승인 범위의 구현·회귀 테스트·문서 작성 |
 | 독립 검토 에이전트 | 구현과 별도로 오류·경계·검증 근거 점검 |
 
-통제: [업무·DB·아키텍처 승인 게이트와 구현/검토 분리](AGENTS.md#기능-개발-절차) · [결정 출처 기록](docs/ai/DECISION_LOG.md) · [테스트 DB 격리 가드](backend-java/src/test/java/com/smallbiz/reconciliation/vendor/TestDatabaseIsolation.java) · [검토당 모델 요청 5회·자동 테스트 유료 호출 금지](AGENTS.md#ai-api-사용-규칙).
+통제: [범위 제한·승인 게이트](AGENTS.md#목표와-판단-주체)(이탈 예방) · [구현/검토 분리](AGENTS.md#기능-개발-절차) · [결정 출처 기록](docs/ai/DECISION_LOG.md) · [테스트 DB 격리 가드](backend-java/src/test/java/com/smallbiz/reconciliation/vendor/TestDatabaseIsolation.java) · [검토당 모델 요청 5회](AGENTS.md#ai-api-사용-규칙)·[동시 하위 에이전트 최대 2개](AGENTS.md#총괄과-하위-에이전트)(비용 통제), 자동 테스트 유료 호출 금지.
 검토 기록의 결함 → 영향 → 수정 → 회귀 근거:
 - [월 잠금 전 시각·plan 확정](docs/receivables-usage-review.md) → 오래된 월/등급으로 승인 → 잠금 후 재조회·월 변경 롤백 → [UsageIntegrationTest](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/matching/UsageIntegrationTest.java).
 - [입력 공백 변경으로 새 요청 키 생성](docs/receivables-mobile-core-review.md) → 응답 유실 뒤 중복 입금 가능 → 정규화 입력 기준 키 유지 → [critical.test.ts](mobile/tests/critical.test.ts).
-- [브라우저 fetch 바인딩 오류](docs/receivables-mobile-core-review.md) → 로그인 요청 전 실패 → lexical wrapper 적용 → [critical.test.ts](mobile/tests/critical.test.ts).
-[자세한 작업 이력](docs/ai/AI_REVIEW_WORK.md) · [면접용 코드 설명](docs/INTERVIEW_NOTES.md). 자동 검증 결과와 개발자의 코드 직접 확인은 구분합니다.
+- [거래처 코드 `ß`/`ſ` 정규화 결함](docs/receivables-registration-review.md)(구현 담당 자체 검토에서 발견) → 대문자 변환 후 ASCII 검사 우회 → 원문 ASCII 검사 후 대문자 변환 → [ReceivablesRegistrationIntegrationTest](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/ReceivablesRegistrationIntegrationTest.java).
+[자세한 작업 이력](docs/ai/AI_REVIEW_WORK.md). 개발자는 핵심 코드 경로를 읽고 본인 PC에서 Hermes로 테스트 실행을 확인했으며, 청구 등록→입금 연결 흐름을 직접 수동 검증했습니다([사용자 확인 기록](docs/ai/DECISION_LOG.md#사용자-확인-사항)).
 
 ## 핵심 설계
 

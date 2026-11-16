@@ -1,16 +1,26 @@
 # 결정 출처 기록
 
-면접 설명을 위해 저장소 기록으로 확인 가능한 결정을 요약한다. 출처 분류는 `사용자 지시` / `AI 제안·사용자 채택` / `AI 제안·기존 구현` / `확인 필요` 중 하나다.
+2026-11-16 사용자 확인을 반영했다. 아래 확인일은 실행일이나 과거 개별 승인일을 새로 확정하는 날짜가 아니다. 출처는 `사용자 지시` / `AI 제안·사용자 채택` / `AI 제안·기존 구현` / `확인 필요`로 구분한다.
 
-| 결정내용 | 결정출처 | 근거경로 |
-|---|---|---|
-| 기존 전역 대사 도메인을 청구·입금 AR로 재해석하지 않고 별도 tenant 소유 데이터로 확장 | 사용자 지시 | [AGENTS.md](../../AGENTS.md), [ADR 0002](../adr/0002-receivables-decisions.md) |
-| 후보와 사람의 확정을 분리하고 자동 확정을 제외 | 사용자 지시 | [ADR 0002](../adr/0002-receivables-decisions.md) |
-| 배분 부모 행을 정렬 잠금하고 잠금 뒤 잔액을 재검사 | AI 제안·기존 구현 | [AllocationService](../../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java), [ADR 0002](../adr/0002-receivables-decisions.md) |
-| 멱등 명령 결과와 원장·감사를 단일 트랜잭션에서 저장 | AI 제안·기존 구현 | [AllocationService](../../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java), [RECEIVABLES_ALLOCATION.md](../RECEIVABLES_ALLOCATION.md) |
-| 신규 AR 서비스에서 `JdbcTemplate`을 사용한 이유와 legacy JPA 병존 근거 | 확인 필요 | [ReceivablesService](../../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/ReceivablesService.java), [AllocationService](../../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java) |
-| 배분 테이블·키 등 구체 DB 선택에 대한 과거 사용자 개별 승인 | 확인 필요 | [ADR 0002](../adr/0002-receivables-decisions.md) |
-| 주요 업무 규칙·DB 관계·아키텍처 변경 전 사용자 승인 요구 | 사용자 지시 | [AGENTS.md](../../AGENTS.md), [ADR 0003](../adr/0003-ar-erp-workflow.md) |
-| `ß`/`ſ` 정규화 결함 발견은 구현자 자체 검토의 재확인이지 독립 검토 발견이 아님 | AI 제안·기존 구현 | [등록 검토](../receivables-registration-review.md), [등록 통합 테스트](../../backend-java/src/test/java/com/smallbiz/reconciliation/receivables/ReceivablesRegistrationIntegrationTest.java) |
-| 특정 AI 제안의 거절·수정 사례와 사용자 직접 확인 완료 여부 | 확인 필요 | [AI 작업 기록](AI_REVIEW_WORK.md) |
-| 입금 등록의 응답 유실 복구 대안 A 구현을 사용자가 채택 | AI 제안·사용자 채택 | [ADR 0002](../adr/0002-receivables-decisions.md) |
+## 사용자 확인 사항
+
+- 개발자는 핵심 코드 경로를 직접 읽었고 본인 PC에서 Hermes 에이전트로 테스트 실행을 확인했다. 청구 등록 → 입금 연결 흐름도 직접 수동 검증했다. 이 확인으로 모든 코드·기기·운영 시나리오 검증 완료를 주장하지 않는다.
+- 원본 보존, 취소·정정의 별도 기록, 후보와 사람 확정 분리는 개발자의 회계·정산 실무 경험에서 나온 요구이며 개발자가 정한 규칙이다.
+- 부모 행 정렬 잠금과 잠금 후 잔액 재검사, 멱등 명령의 단일 트랜잭션 저장, 신규 AR의 JdbcTemplate 사용은 AI가 제안하고 개발자가 채택했다.
+- 임의 확장 금지와 승인 게이트는 개발자가 범위 이탈을 예방하려고 미리 정했다.
+- 검토당 모델 요청 5회, 동시 하위 에이전트 최대 2개는 토큰 소모가 빨라 비용을 통제하려고 개발자가 정했다.
+- AI 제안을 거절하거나 수정 지시한 사례는 현재까지 없다고 사용자가 확인했다.
+
+## 결정 표
+
+| 결정 내용 | 결정 출처 | 근거 문서 경로 |
+| --- | --- | --- |
+| 기존 전역 대사와 별도 tenant AR 도메인 유지 | 사용자 지시 | [AGENTS](../../AGENTS.md), [ADR 0002](../adr/0002-receivables-decisions.md) |
+| 정합성 업무 규칙: 원본 보존, 취소·정정 별도 기록, 후보와 사람 확정 분리 | 사용자 지시 | 회계·정산 실무 경험에 따른 [사용자 확인](#사용자-확인-사항), [ADR 0002](../adr/0002-receivables-decisions.md) |
+| 부모 행 정렬 잠금 + 잠금 후 잔액 재검사 | AI 제안·사용자 채택 | [사용자 확인](#사용자-확인-사항), [AllocationService](../../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java) |
+| 멱등 명령·원장·감사 결과를 단일 트랜잭션에서 저장 | AI 제안·사용자 채택 | [사용자 확인](#사용자-확인-사항), [배분 계약](../RECEIVABLES_ALLOCATION.md) |
+| 신규 AR에 JdbcTemplate 사용 | AI 제안·사용자 채택 | [사용자 확인](#사용자-확인-사항), [ReceivablesService](../../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/ReceivablesService.java) |
+| 에이전트 임의 확장 금지·업무/DB/아키텍처 승인 게이트 | 사용자 지시 | 범위 이탈 예방 목적의 [사용자 확인](#사용자-확인-사항), [AGENTS](../../AGENTS.md) |
+| 검토당 모델 요청 5회·동시 하위 에이전트 최대 2개 | 사용자 지시 | 비용 통제 목적의 [사용자 확인](#사용자-확인-사항), [AGENTS](../../AGENTS.md) |
+| 입금 등록 응답 유실 복구 대안 A 구현 | AI 제안·사용자 채택 | [ADR 0002](../adr/0002-receivables-decisions.md) |
+| 세부 배분 테이블·키별 과거 개별 승인 내역 | 확인 필요 | 이번 확인은 각 스키마 세부 결정까지 열거하지 않음. [ADR 0002](../adr/0002-receivables-decisions.md) |
