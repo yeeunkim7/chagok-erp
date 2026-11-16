@@ -1,6 +1,6 @@
-# 차곡 모바일 코어
+# 차곡 — 매출채권·입금 대사 시스템 · API 검증용 클라이언트
 
-소사업자를 위한 미수금 장부. 공식 Expo TypeScript 템플릿 기반의 iOS·Android 공통 앱이며 같은 React Native 화면을 웹에서도 검증할 수 있다.
+매출채권 API를 확인하는 미수금 장부 화면. 공식 Expo TypeScript 템플릿 기반의 iOS·Android 공통 앱이며 같은 React Native 화면을 웹에서도 검증할 수 있다.
 
 현재 기능은 로그인·가입·세션, 서버 전체 잔액 홈, 거래처·청구·입금 직접 등록, 페이지 목록, 청구 현재 잔액 상세, 서버 월 사용량·로그아웃, 입금 연결 검토·확정·취소다. CSV 가져오기 UI는 후속 범위다. [입금 연결 설계와 계약](../docs/RECEIVABLES_MOBILE_MATCHING.md)을 따른다.
 
@@ -48,7 +48,7 @@ npm run typecheck
 npx expo export --platform web
 ```
 
-`npm test`는 Node 내장 테스트 하네스로 기존 핵심 8개와 입금 연결 상태 5개 검사를 실행한다(중복 요청 키, 재시도 금지, 세션 경합/401/저장 순서, URL, 브라우저 fetch 바인딩, 정밀 금액·날짜). 입금 연결 검사는 다대다 초안·쌍 유일성·정규화 명령 키·명시적 최종 검토 조건·날짜 범위·서버 한도 오류를 확인한다. 실제 브라우저·기기 검증 상태와 남은 작업은 [모바일 코어 결정](../docs/RECEIVABLES_MOBILE_CORE.md), [실제 검증 기록](../docs/RECEIVABLES_MOBILE_VALIDATION.md)을 따른다.
+`npm test`는 Node 내장 테스트 하네스로 핵심 14개와 입금 복구 12개 검사를 실행한다(중복 요청 키, 재시도 금지, 세션 경합/401/저장 순서, URL, 브라우저 fetch 바인딩, 정밀 금액·날짜). 입금 연결 검사는 다대다 초안·쌍 유일성·정규화 명령 키·명시적 최종 검토 조건·날짜 범위·서버 한도 오류를 확인한다. 실제 브라우저·기기 검증 상태와 남은 작업은 [모바일 코어 결정](../docs/RECEIVABLES_MOBILE_CORE.md), [실제 검증 기록](../docs/RECEIVABLES_MOBILE_VALIDATION.md)을 따른다.
 
 ## 입금 연결
 
@@ -68,3 +68,7 @@ npx expo export --platform web
 Native는 SecureStore(보관 값 UTF-8 1800바이트 상한), Web은 IndexedDB를 사용한다. Web의 금융 입력 원문은 앱 자체 암호화 없이 사이트 데이터에 남는다. 토큰은 포함하지 않으며 서버 주소·계정·사업체로 구분한다. 성공 확인 후 보관을 삭제하고, 미확인 상태는 로그아웃해도 유지한다. 사이트 데이터 삭제나 앱 제거 뒤에는 복구를 보장하지 않는다. 청구·배분·취소 복구는 아직 메모리 범위다.
 
 단위 검증은 `npm test`, 타입 검사는 `npm run typecheck`를 사용한다. 실제 Java·브라우저 검증은 저장소 루트의 `scripts/verify-payment-recovery-browser.py`이며 localhost 8091/8081과 전용 reconciliation_test/chagok_test 설정만 사용한다. 만든 계정만 정리하며 캡처는 저장소 밖에 보관한다. iOS/Android 실기기 검증과 구분한다.
+
+## 현재 검증 기준
+
+2026-11-16 `npm test` 26개 통과(실패·오류·스킵 0), `npm run typecheck` 통과. Java 220개와 Flyway V1~V14를 포함한 [통합 검증 기록](../docs/REPOSITORY_VALIDATION.md)을 따른다. Docker 웹 기동과 기기 설치 검증은 별개이며 iOS/Android 실기기는 미검증이다.

@@ -317,3 +317,8 @@ CI_PLAN.md에 PR/수동 실행·읽기 권한·임시 PostgreSQL17·비관리자
 신규5개 통합 시나리오와 최종 전체220개/25 suite 통과(실패·오류·스킵0,build종료0,1분12초), Flyway14개 성공을 확인했다. totals와page 사이 별도 배분 확정을 실제 commit시켜 같은 응답의snapshot과 다음 조회의새잔액을 확인했다. 최초literal검색 테스트의 퍼센트 이중인코딩을 MockMvc param 입력으로 수정한 뒤 통과했다. 완납 문서는 현재 연체일0/SETTLED로 정리하고 재검증했다. 실제 최종JAR HTTP에서 반제취소→청구취소→대체60000등록→입금40000재배분→미수20000/31~60구간20000을 확인했고 원본보존·멱등·401/403·literal검색도 통과했다. 생성한 검증 계정만 정리했다. 독립 코드/문서 검토와 최종XML 대조에서 차단 문제 없음.
 
 증거는 저장소 밖 /workspace/.local/run/ar-erp-validation/p3-final 및 http-summary.json에 보관했다. 기존 V1~V13·개발 DB·유료 모델은 변경/사용하지 않았다. 새 API와 원장 SQL만 추가했으며 이번3개 단계 커밋에 기존 입금 복구·Docker·CI 미커밋 작업을 섞지 않았다. 푸시·배포·실제 GitHub Actions·사용자PC 실행은 하지 않았다.
+
+
+## 2026-11-16 저장소 포트폴리오 정리
+
+사용자 요청으로 Python 레거시를 legacy/python, AI 기록을 docs/ai로 모으고 참조를 갱신했다. AGENTS의 규칙·Java 업무 코드·Flyway·테스트 내용은 보존했다. README에는 결정·통제·검증 근거를 우선 배치하고 면접 노트와 결정 출처 초안을 추가했다. 개발자의 직접 구현·확인 이력은 새로 만들지 않았다. 이동 전후 Java 220개(실패·오류·스킵 0), 클라이언트 26개와 typecheck, Flyway14, 별도 Docker 테스트 DB·웹·API 기동을 검증했다. 원격 CI는 GitHub API Forbidden으로 미검증이다. 명령·실패와 복구·미검증 범위는 [검증 기록](../REPOSITORY_VALIDATION.md)에 남겼다. 한국어 작업 단위 커밋만 수행하며 푸시는 사용자 승인 전까지 하지 않는다.

@@ -16,7 +16,7 @@ Docker Engine + Compose 2.17 이상(BuildKit named context 사용), Python 3가 
 
 Compose 프로젝트 기본 이름은 chagok-local이다. dev/test 네트워크와 볼륨은 서로 다르다. DB 포트는 호스트에 공개하지 않으며 기존 WSL PostgreSQL·SQLite 파일을 마운트하지 않는다. 테스트 실행기는 dev 네트워크에 연결되지 않는다. 일반 bridge 네트워크이므로 외부 통신까지 차단하는 구성은 아니다.
 
-이미지는 확인한 공식 digest로 고정한다. 새 빈 Docker DB에 기존 Flyway V1~V13을 적용하며 새 마이그레이션은 없다. 실제 운영·개발 금융 자료를 가져오지 않는다. 저장 볼륨은 백업을 대신하지 않는다.
+이미지는 확인한 공식 digest로 고정한다. 새 빈 Docker DB에 기존 Flyway V1~V14를 적용한다. Docker 설정 자체가 업무 마이그레이션을 추가하지 않는다. 실제 운영·개발 금융 자료를 가져오지 않는다. 저장 볼륨은 백업을 대신하지 않는다.
 
 ## 처음 실행
 
@@ -95,6 +95,8 @@ secret 파일만 바꿔도 기존 DB 비밀번호가 바뀌지 않는다. 변경
 일반 PC에서는 별도 CA 설정이 필요 없다. TLS 검사 프록시가 있는 검증 환경은 저장소 밖 Compose override로 `proxy_ca` build secret을 backend/test-runner 빌드에 전달한다. `docker/gradle-network.sh`는 해당 RUN 안의 임시 Java truststore에만 CA를 넣고 종료 시 제거한다. 세션 CA·프록시 인증값을 이미지에 COPY하거나 TLS 검증을 끄지 않는다. 인증정보가 포함된 프록시 URL은 지원하지 않고 명시적으로 거절한다.
 
 ## 실제 검증 결과
+
+현재 2026-11-16 재실행 결과는 [검증 기록](REPOSITORY_VALIDATION.md)을 따른다. 아래 197개·V13 결과는 2026-11-13 당시 이력이다.
 
 2026-11-13 클라우드 Linux의 로컬 Docker Engine 28.4.0 / Compose 2.40.3에서 검증했다. 이미지 내부는 Java 21.0.13, PostgreSQL 17.12다. 사용자 Windows/WSL의 기존 PostgreSQL 17.11과는 별도 환경이다.
 

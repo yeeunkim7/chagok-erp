@@ -1,74 +1,68 @@
-# 차곡 — 미수금·입금 확인
+# 차곡 — 매출채권·입금 대사 시스템 (Java/Spring 백엔드 · AI 에이전트 개발)
 
-청구와 입금을 연결하고, 아직 받지 못한 금액을 확인하는 서비스입니다. **Codex의 총괄·하위 AI 에이전트를 활용해 개발했습니다.**
+청구·입금을 다대다로 배분하고, 부분입금과 미수금을 관리하는 ERP 매출채권 보조원장입니다.
 
 ## 개발 배경
 
-기존 입출금 대사 시스템은 날짜별 예정 금액과 은행 내역을 비교했습니다. 하지만 합계가 같아도 어떤 청구가 지급됐는지는 알 수 없고, 부분 입금이나 여러 청구를 합친 입금을 관리하기 어렵습니다. 기존 대사 기능을 보존하면서 청구·입금·배분 이력을 별도 도메인으로 확장했습니다.
+기존 날짜별 입출금 대사를 청구별 수금 관리로 확장했습니다. 합계가 같아도 어느 청구가 결제됐는지는 별도 확인이 필요합니다.
+중복 업로드·재요청은 입금을 중복 등록할 수 있고, 정정 과정의 덮어쓰기는 원본 근거를 잃게 합니다.
+차곡은 후보 조회와 사람의 확정을 분리하고, Java·DB가 금액을 계산하며 원본과 취소 이력을 보존하도록 구현했습니다.
 
-소규모 사업자의 후불 거래 관리를 대상으로 합니다. 실제 고객 수요와 사용성은 파일럿 검증이 남아 있습니다.
+## AI 에이전트 개발 체계
 
-## 사용 흐름과 기능
+| 역할 | 책임 |
+| --- | --- |
+| 개발자 | 업무 방향·범위·승인 기준 결정, 최종 코드 확인 |
+| Codex 총괄 | 기존 코드 분석, 작업·파일 범위 배분, 실행 근거 통합 |
+| 구현 에이전트 | 승인 범위의 구현·회귀 테스트·문서 작성 |
+| 독립 검토 에이전트 | 구현과 별도로 오류·경계·검증 근거 점검 |
 
-청구 등록 → 입금 등록 → 연결 후보 조회 → 사용자 검토·확정 → 미수금 조회 → 필요 시 취소
+통제: [업무·DB·아키텍처 승인 게이트와 구현/검토 분리](AGENTS.md#기능-개발-절차) · [결정 출처 기록](docs/ai/DECISION_LOG.md) · [테스트 DB 격리 가드](backend-java/src/test/java/com/smallbiz/reconciliation/vendor/TestDatabaseIsolation.java) · [검토당 모델 요청 5회·자동 테스트 유료 호출 금지](AGENTS.md#ai-api-사용-규칙).
+검토 기록의 결함 → 영향 → 수정 → 회귀 근거:
+- [월 잠금 전 시각·plan 확정](docs/receivables-usage-review.md) → 오래된 월/등급으로 승인 → 잠금 후 재조회·월 변경 롤백 → [UsageIntegrationTest](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/matching/UsageIntegrationTest.java).
+- [입력 공백 변경으로 새 요청 키 생성](docs/receivables-mobile-core-review.md) → 응답 유실 뒤 중복 입금 가능 → 정규화 입력 기준 키 유지 → [critical.test.ts](mobile/tests/critical.test.ts).
+- [브라우저 fetch 바인딩 오류](docs/receivables-mobile-core-review.md) → 로그인 요청 전 실패 → lexical wrapper 적용 → [critical.test.ts](mobile/tests/critical.test.ts).
+[자세한 작업 이력](docs/ai/AI_REVIEW_WORK.md) · [면접용 코드 설명](docs/INTERVIEW_NOTES.md). 자동 검증 결과와 개발자의 코드 직접 확인은 구분합니다.
 
-- 거래처·청구·입금 직접 등록, 은행 CSV 가져오기 API와 원본 추적
-- 날짜·금액·입금자명에 따른 후보 조회와 부분·묶음·분할 연결
-- 현재 미수·기한 초과 잔액·미배분 입금 조회
-- 사유를 남기는 연결 취소와 감사 이력
-- 계정·사업체별 접근 제어, 월별 성공 후보 실행 이용량
+## 핵심 설계
 
-청구 100,000원에 입금 40,000원을 연결하면 미수는 60,000원입니다. 입금 등록이나 후보 조회만으로 미수가 줄지는 않습니다. 자료 없음, 합계 일치, 개별 거래 연결은 서로 다른 상태입니다.
+| 문제 | 설계 | 코드 / 회귀 테스트 |
+| --- | --- | --- |
+| 동시 초과 배분 | 입금→청구 ID 정렬 잠금, 잠금 후 잔액 재검사, 배분·감사 함께 롤백 | [AllocationService](backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java) / [AllocationIntegrationTest](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/allocation/AllocationIntegrationTest.java) |
+| 응답 유실·중복 요청 | tenant·작업별 키와 내용 비교, 같은 요청 결과 재사용, 입금 재시작 복구 | [ReceivablesService](backend-java/src/main/java/com/smallbiz/reconciliation/receivables/ReceivablesService.java)·[복구](mobile/src/pending-payment.ts) / [등록 테스트](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/ReceivablesRegistrationIntegrationTest.java)·[복구 테스트](mobile/tests/pending-payment.test.ts) |
+| 정정 시 원본 유실 | 반제·청구 취소 사실 추가, 대체 청구 연결, 원문 보존 | [배분 취소](backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java)·[InvoiceCancellationService](backend-java/src/main/java/com/smallbiz/reconciliation/receivables/InvoiceCancellationService.java) / [청구 취소 테스트](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/InvoiceCancellationIntegrationTest.java) |
+| 사업장 간 데이터 혼입 | 서버 tenant 권한 검사와 복합 FK | [TenantAccess](backend-java/src/main/java/com/smallbiz/reconciliation/account/TenantAccess.java)·[V9](backend-java/src/main/resources/db/migration/V9__tenant_receivables_registration.sql) / [등록 테스트](backend-java/src/test/java/com/smallbiz/reconciliation/receivables/ReceivablesRegistrationIntegrationTest.java) |
 
 ## 기술과 구조
 
-Java 21 · Spring Boot · PostgreSQL 17 · Gradle · Flyway / React Native · Expo · TypeScript
+Java 21 · Spring Boot 4.1.1 · PostgreSQL 17 · Flyway V1~V14 · JPA/JdbcTemplate · Spring Security · Gradle 9.7.1 · Docker · GitHub Actions. [빌드 설정](backend-java/build.gradle)
+Expo 58 / React Native 0.88.1 / TypeScript 6.0.3: API 검증용 클라이언트. [설정](mobile/package.json)
 
-모바일 앱이 사업체별 API를 호출하고, 신규 미수금 기능은 Controller → Service → JdbcTemplate의 SQL → PostgreSQL로 처리합니다. 기존 대사 기능의 JPA Repository 구조는 유지합니다. 금액 계산과 확정은 Java·DB에서 수행합니다.
+[ERD](docs/receivables-erd.md) · [아키텍처·호출 흐름](docs/architecture.md) · [설계 결정](docs/adr/0003-ar-erp-workflow.md)
 
-[아키텍처와 호출 흐름](docs/architecture.md) · [테이블 관계](docs/receivables-erd.md)
+## 실행·테스트
 
-## 주요 설계
-
-- **응답 유실 후 재시도:** 사업체·작업별 요청 키와 내용을 보관합니다. 같은 요청은 기존 결과를 반환하고, 같은 키로 내용을 바꾸면 충돌로 처리합니다. [등록 계약](docs/RECEIVABLES_REGISTRATION.md)
-- **동시 배분:** 입금·청구 부모 행을 일정한 순서로 잠근 뒤 잔액을 다시 검사합니다. 배분·감사 저장이 실패하면 함께 롤백합니다. [확정·취소 계약](docs/RECEIVABLES_ALLOCATION.md)
-- **성공한 실행만 집계:** 후보 결과·사용량 이력·월별 횟수를 같은 트랜잭션에서 저장합니다. 재요청과 실패는 추가 차감하지 않습니다. [사용량 계약](docs/RECEIVABLES_USAGE.md)
-
-선택 이유·대안·판단 주체는 [의사결정 기록](docs/adr/0002-receivables-decisions.md)에 구분했습니다.
-
-## 실행과 테스트
-
-[백엔드 설정](backend-java/README.md)에서 JDK 21과 PostgreSQL 개발·테스트 DB를 준비하고 환경 변수를 설정합니다. 비밀값은 저장소에 넣지 않습니다.
+[백엔드 환경 변수](backend-java/README.md)를 먼저 설정합니다. 개발 DB는 `reconciliation_dev`, 테스트는 `reconciliation_test`만 사용합니다.
 
 ```sh
-# backend-java 디렉터리에서 실행. Windows에서는 gradlew.bat 사용
-bash gradlew bootRun
-# TEST_DB_URL은 reconciliation_test여야 합니다.
-bash gradlew test
+(cd backend-java && bash gradlew bootRun)       # API 서버
+(cd backend-java && bash gradlew clean build)   # 테스트 포함
+(cd mobile && npm ci && npm test && npm run typecheck)
 ```
 
-[모바일 설정](mobile/README.md)에 따라 서버 주소와 브라우저 CORS를 설정합니다.
+[Docker 실행](docs/DOCKER_LOCAL.md): 최초 비밀 파일 준비 후 `docker compose up -d --build --wait web`. 웹 주소는 `http://localhost:18080`입니다.
 
-```sh
-cd mobile
-npm ci
-npm run web
-npm test
-npm run typecheck
-```
+## 검증 결과 · 2026-11-16
 
-2026-11-01 기록: 백엔드 186개, 클라이언트 13개, 실제 브라우저·API 연결 9개와 기존 화면 회귀 9개 통과. 2026-11-04 사용자 PC에서도 백엔드 186개 통과(실패·오류·스킵 0)를 확인했습니다. 클라이언트·브라우저 수치는 기존 실행 기록입니다. [실행 근거와 미검증 범위](docs/RECEIVABLES_MOBILE_MATCHING.md)
+Java **220개**, 클라이언트 **26개** 통과(각 실패·오류·스킵 0), 타입 검사 통과. 테스트 DB Flyway **14개** 적용, Docker 백엔드·웹 기동 확인. 세부 실행 결과와 명령은 [검증 기록](docs/REPOSITORY_VALIDATION.md)에 있습니다.
+GitHub Actions는 **워크플로 구성 완료, 원격 실행 미검증**입니다.
 
-## AI 에이전트 활용
+## 현재 범위와 후속 계획
 
-Codex를 활용해 개발했습니다. 개발자가 서비스 목표·업무 규칙·범위·완료 기준을 정하고, 총괄 에이전트가 기획·분석, 자료조사, 디자인, 개발, 독립 검토 작업을 배분했습니다. 코드 구현과 테스트 실행에는 AI를 활용했습니다. 세부 설계 중 개발자의 직접 선택이 확인되지 않는 사항은 구현 사실과 구분합니다.
+현재 원장 기준 청구·입금·배분·취소·미결/연체 조회를 제공합니다. `asOf`는 연체 판정일이며 과거 잔액 재현이 아닙니다. 운영 배포·성능 수치·운영 백업/복구·iOS/Android 실기기는 미검증입니다. 제품의 AI 실행은 차단 상태입니다.
 
-[개발자 결정 및 검토 절차](AGENTS.md) · [작업 이력](docs/ai/AI_REVIEW_WORK.md)
+<details><summary>부록</summary>
 
-개발 후에는 개인 PC의 Hermes에 Python 조회 도구를 연결해 실제 Java API의 미수 요약을 설명하는 실습을 진행했습니다. 제품 FREE 기능과 분리된 합성 자료 실습입니다. [소스와 확인 범위](examples/hermes/chagok-local-api)
+[Hermes 조회 도구 실습](examples/hermes/chagok-local-api) · [Python 레거시](legacy/python/README.md) · [기존 계획](docs/RECEIVABLES_FREE_MVP_PLAN.md)
 
-## 현재 범위와 남은 작업
-
-FREE 핵심 API와 Expo 화면의 등록→후보→확정→취소 흐름을 구현하고 브라우저에서 검증했습니다. FREE 업무는 AI를 호출하지 않습니다. 모바일 CSV 화면, iPhone·Android 실기기, 계정 복구·요청 제한·보존/삭제 정책과 공개 운영 검증이 남아 있습니다. 앱인토스 적용, 스토어 출시, 결제·구독과 PRO AI는 후속 범위입니다. Docker·CI·서버 운영은 저장소 정리와 기존 시스템 검토 이후 단계별 승인으로 진행할 예정이며, 아직 검증하지 않았습니다.
-
-[현재 개발 계획](docs/RECEIVABLES_FREE_MVP_PLAN.md) · [문서 분류와 검토 결과](docs/DOCUMENTATION_REVIEW.md)
+</details>

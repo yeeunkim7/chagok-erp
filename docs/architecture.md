@@ -1,4 +1,4 @@
-# 아키텍처와 핵심 설계
+# 차곡 — 매출채권·입금 대사 시스템 · 아키텍처
 
 ## 실행 흐름
 
@@ -11,7 +11,7 @@ flowchart LR
     AUTH --> MATCH[금융 원본 조회·후보 실행 기록]
     AUTH --> ALLOC[배분 확정·취소<br/>현재 잔액 재검증]
     AUTH --> USAGE[월별 성공 실행 사용량]
-    REG --> PG[(PostgreSQL<br/>Flyway V1–V13)]
+    REG --> PG[(PostgreSQL<br/>Flyway V1–V14)]
     MATCH --> PG
     ALLOC --> PG
     USAGE --> PG
@@ -59,6 +59,8 @@ flowchart LR
 - CSV 원본 추적: [`BankImportService`](../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/bankimport/BankImportService.java), V12 import/source row/transaction와 payment 출처 연결
 - 후보 snapshot과 사용량: [`MatchingService`](../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/matching/MatchingService.java), [`UsageService`](../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/matching/UsageService.java), V11–V13
 - 배분 원장: [`AllocationService`](../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/allocation/AllocationService.java), V10 batch/line/cancellation/audit/command
+- 청구 정정: [`InvoiceCancellationService`](../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/InvoiceCancellationService.java), V14 취소·명령·대체 연결. 원문을 덮어쓰지 않는다.
+- 미결·연체 명세: [`ReceivablesQueryService`](../backend-java/src/main/java/com/smallbiz/reconciliation/receivables/ReceivablesQueryService.java). read-only REPEATABLE_READ에서 전체 필터 합계와 페이지를 같은 snapshot으로 조회한다.
 - 클라이언트: [`mobile`](../mobile), API 호출·초안·재전송 상태는 앱에 두되 최종 배분액/잔액 계산은 서버 응답을 사용
 
 기존 전역 데이터는 V1–V7 스키마에 남고 V8은 identity만 추가합니다. migration 및 정확한 테이블 필드는 [ERD](receivables-erd.md)를 참고하세요.
@@ -79,3 +81,7 @@ flowchart LR
 2026-11-04 사용자 PC의 합성 계정으로 확인한 별도 학습 경로다. 제품 FREE 화면에서 호출하는 AI 기능은 아니다. 도구 소스는 [examples/hermes/chagok-local-api](../examples/hermes/chagok-local-api)에 있다. 모델이 URL·tenant·인증 정보를 입력하지 못하도록 제한하고, 프록시·리다이렉트·자동 재시도를 사용하지 않는다. 원본의 금액을 Python이나 모델이 다시 계산하지 않는다.
 
 `asOf`는 현재 원장의 연체 판정일이며 과거 잔액이나 특정일 거래 필터가 아니다. 결과에는 요약 API 근거가 있고 개별 원본 ID는 없다. 인증·접속 실패와 NO_DATA는 구분한다. 로컬 세션 자체는 쓰기 권한도 있으므로 GET 도구 제한을 서버의 읽기 전용 자격증명으로 설명하지 않는다. 제품 적용은 별도 권한 설계·검증이 필요하다.
+
+## 실행 기준
+
+Java 21 / Spring Boot 4.1.1 / PostgreSQL 17 / Gradle 9.7.1. 2026-11-16 Java 220개·클라이언트 26개와 Flyway V1~V14를 재검증했다. [Docker·테스트 실행 근거](REPOSITORY_VALIDATION.md). GitHub Actions는 워크플로 구성 완료, 원격 실행 미검증이다.
