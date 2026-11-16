@@ -1,0 +1,3 @@
+/docker/*.sh text eol=lf
+/backend-java/Dockerfile text eol=lf
+/backend-java/gradlew text eol=lf

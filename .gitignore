@@ -68,3 +68,7 @@ venv/
 /docs/PORTFOLIO_LEARNING.md
 /docs/PORTFOLIO_DELIVERY_PLAN.md
 /docs/screenshots/portfolio-nov05-*.png
+
+### Local Docker credentials and exported test reports ###
+/.local/docker-secrets/
+/.local/docker-test-reports/

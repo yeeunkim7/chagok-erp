@@ -208,3 +208,8 @@ curl.exe -s -X PUT http://localhost:8082/api/v1/reconciliations/daily/2026-09-03
 ## Expo 브라우저 연결
 
 별도 origin의 Expo 웹은 서버 `app.cors.allowed-origins`에 정확한 주소를 명시한 경우에만 허용합니다. 기본 허용 목록은 비어 있으며 기존 Bearer·사업체 권한 검사를 유지합니다. [Windows/모바일 실행 및 검증](../docs/RECEIVABLES_MOBILE_VALIDATION.md)을 참고하세요. native iOS/Android 요청에는 CORS가 필요하지 않습니다.
+
+
+## 별도 Docker 로컬 환경
+
+기존 WSL DB와 분리한 백엔드·개발/테스트 DB와 웹 실행은 [Docker 안내](../docs/DOCKER_LOCAL.md)를 따른다. 웹은 `http://localhost:18080`을 사용한다. CI/CD·배포는 별도 단계다.
