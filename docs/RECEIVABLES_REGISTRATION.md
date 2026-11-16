@@ -69,4 +69,4 @@
 
 전용 `reconciliation_test` DB와 기존 `RejectDevelopmentDatabaseInitializer`를 사용하는 실제 Spring Security/MockMvc 통합 테스트를 추가했다. 금액/날짜 경계, tenant 격리와 DB 복합 FK, 모든 서비스의 세션 재확인, 정규화 재전송, 동시 동일/상이 payload, 동시 청구 번호 충돌, 저장 실패 rollback, 목록/필터를 확인한다. AI 키와 기능 스위치가 설정된 테스트에서도 AI 클라이언트와 조회 도구 호출이 0인지 검증한다.
 
-테스트는 자신이 만든 tenant의 새 금융 테이블을 FK 순서로 정리한 뒤 자신이 만든 계정 행만 정리한다. 운영 스키마에 금융 자료 cascade 삭제를 추가하거나 기존 인증 테스트의 전역 cleanup을 넓히지 않는다. 전체 회귀/패키징 결과는 [AI 작업 기록](AI_REVIEW_WORK.md)에 기록한다.
+테스트는 자신이 만든 tenant의 새 금융 테이블을 FK 순서로 정리한 뒤 자신이 만든 계정 행만 정리한다. 운영 스키마에 금융 자료 cascade 삭제를 추가하거나 기존 인증 테스트의 전역 cleanup을 넓히지 않는다. 전체 회귀/패키징 결과는 [AI 작업 기록](ai/AI_REVIEW_WORK.md)에 기록한다.

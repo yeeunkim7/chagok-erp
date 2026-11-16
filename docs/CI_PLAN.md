@@ -41,7 +41,7 @@ TEST_DB_URL은 runner의 명시적 PostgreSQL 주소와 reconciliation_test로 �
 2. scripts/ci/init-test-db.sh — runner 전용 DB·비관리자 역할 초기화. 로컬 DB에는 실행하지 않도록 CI 실행 조건을 검사.
 3. scripts/ci/verify-flyway.py — 소스 migration 목록과 실제 DB 이력의 버전·파일명·성공 여부 대조.
 4. scripts/ci/summarize-tests.py — XML 집계, 실제 빌드 종료 코드와 결과를 Markdown 요약으로 저장. XML 없음·파손·0건·실패/오류를 성공으로 처리하지 않음.
-5. 이 문서 및 docs/AI_REVIEW_WORK.md — 최종 실행 방법·결과·미검증 범위 기록.
+5. 이 문서 및 docs/ai/AI_REVIEW_WORK.md — 최종 실행 방법·결과·미검증 범위 기록.
 
 기존 업무 코드·Flyway SQL·인증·금액 계산·TestDatabaseIsolation은 변경하지 않았다. 공식 저장소의 v6 ref와 action metadata를 확인한 commit SHA로 고정했다. gradle/actions의 annotated tag는 peeled commit을 사용했다. 버전 갱신 시에도 공식 ref·입력 계약을 확인해야 한다.
 

@@ -72,3 +72,11 @@ venv/
 ### Local Docker credentials and exported test reports ###
 /.local/docker-secrets/
 /.local/docker-test-reports/
+
+# Legacy Python working-directory database files
+/legacy/python/accounting.db
+/legacy/python/accounting.db-*
+
+# Private interview notes (store outside the repository)
+INTERVIEW_NOTES*
+/chagok-private/

@@ -23,7 +23,7 @@
 
 ## 실제 코드가 보여주는 재사용 경계
 
-경로는 저장소 기준이다. 기존 흐름 전체 설명은 [ai-review-code-analysis.md](ai-review-code-analysis.md)의 Existing flows / Business semantics를 재사용한다.
+경로는 저장소 기준이다. 기존 흐름 전체 설명은 [ai-review-code-analysis.md](ai/ai-review-code-analysis.md)의 Existing flows / Business semantics를 재사용한다.
 
 | 근거 | 기존 의미와 한계 | 새 도메인에서의 처리 |
 | --- | --- | --- |

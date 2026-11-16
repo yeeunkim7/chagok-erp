@@ -20,7 +20,7 @@ README·PORTFOLIO·AGENTS를 먼저 정리하고 기술 계약, 현재 계획, �
 | [README.md](../README.md) | 프로젝트 소개 | 서비스·문제·기술·실행을 먼저 설명하고 AI 활용을 별도 절로 이동 |
 | [backend-java/README.md](../backend-java/README.md) | 프로젝트 소개 / 기술 설계 | 실행·V1~V13·기본 접근 차단 갱신, 과거 45개와 이후 186개 검증 구분 |
 | [backend-java/docs/design.md](../backend-java/docs/design.md) | 기술 설계 | legacy 범위·인증·화면·검토 저장의 오래된 설명 수정 |
-| [docs/AI_REVIEW_WORK.md](AI_REVIEW_WORK.md) | 작업 기록 | 현재 요약과 과거 원문 분리; Objective 이하 기존 단계 이력 보존 |
+| [docs/ai/AI_REVIEW_WORK.md](ai/AI_REVIEW_WORK.md) | 작업 기록 | 현재 요약과 과거 원문 분리; Objective 이하 기존 단계 이력 보존 |
 | [docs/AUTH_FOUNDATION.md](AUTH_FOUNDATION.md) | 기술 설계 / 작업 기록 | 현재 토큰 저장 구현 링크와 당시 인증 단계 기록 구분 |
 | [docs/LEGACY_RECONCILIATION.md](LEGACY_RECONCILIATION.md) | 프로젝트 소개 / 작업 기록 | 초기 범위·테이블 명시, 신규 기능 반복은 계약 링크화, 실무 경험은 확인 필요 |
 | `docs/PORTFOLIO.md` (현재 개인 보관) | 포트폴리오 | 문제·데이터 흐름·결정 출처·실제 결함 2개·검증 한계로 재구성 |
@@ -38,12 +38,12 @@ README·PORTFOLIO·AGENTS를 먼저 정리하고 기술 계약, 현재 계획, �
 | [docs/RECEIVABLES_USAGE_SMOKE.md](RECEIVABLES_USAGE_SMOKE.md) | 작업 기록 | 사용량 단계180개 검증 보존, 이후 모바일 구현 연결 |
 | [docs/adr/0001-auth-tenant-ai-boundary.md](adr/0001-auth-tenant-ai-boundary.md) | 의사결정 | 한국어화, 기존 Accepted와 사용자 개별 승인 구분, 제약 보존 |
 | [docs/adr/0002-receivables-decisions.md](adr/0002-receivables-decisions.md) | 의사결정 | 신규: 기존 도메인·확정·사용량 판단 근거와 주체를 회고로 기록 |
-| [docs/ai-review-ai.md](ai-review-ai.md) | 기술 설계 / 작업 기록 | 과거 연결/키 검증과 현재 실행 차단 구분 |
-| [docs/ai-review-code-analysis.md](ai-review-code-analysis.md) | 기술 설계 / 작업 기록 | 초기 분석 범위 명시, 미커밋988a983 확인으로 SHA 요청이 해결됨을 기록 |
-| [docs/ai-review-design.md](ai-review-design.md) | 기술 설계 / 작업 기록 | 기존 AI 화면 이력과 현재 미수금 화면 구분 |
-| [docs/ai-review-independent-review.md](ai-review-independent-review.md) | 작업 기록 | 당시 인증 미구현과 이후 보안 경계 구현 구분 |
-| [docs/ai-review-research.md](ai-review-research.md) | 의사결정 참고 / 작업 기록 | 공식 조사 근거 보존, 조사 당시 구현과 현재·수요 가설 구분 |
-| [docs/ai-review-running.md](ai-review-running.md) | 기술 설계 / 작업 기록 | configured=false와 현재 PRO 포함 실행 차단·인증 구현 반영 |
+| [docs/ai/ai-review-ai.md](ai/ai-review-ai.md) | 기술 설계 / 작업 기록 | 과거 연결/키 검증과 현재 실행 차단 구분 |
+| [docs/ai/ai-review-code-analysis.md](ai/ai-review-code-analysis.md) | 기술 설계 / 작업 기록 | 초기 분석 범위 명시, 미커밋988a983 확인으로 SHA 요청이 해결됨을 기록 |
+| [docs/ai/ai-review-design.md](ai/ai-review-design.md) | 기술 설계 / 작업 기록 | 기존 AI 화면 이력과 현재 미수금 화면 구분 |
+| [docs/ai/ai-review-independent-review.md](ai/ai-review-independent-review.md) | 작업 기록 | 당시 인증 미구현과 이후 보안 경계 구현 구분 |
+| [docs/ai/ai-review-research.md](ai/ai-review-research.md) | 의사결정 참고 / 작업 기록 | 공식 조사 근거 보존, 조사 당시 구현과 현재·수요 가설 구분 |
+| [docs/ai/ai-review-running.md](ai/ai-review-running.md) | 기술 설계 / 작업 기록 | configured=false와 현재 PRO 포함 실행 차단·인증 구현 반영 |
 | [docs/architecture.md](architecture.md) | 기술 설계 | 실제 Service→JdbcTemplate 경계·잠금·트랜잭션·성능 한계 추가 |
 | [docs/auth-security-review.md](auth-security-review.md) | 작업 기록 | 개발자에게 전달을 구현 담당 에이전트에게 전달로 정정 |
 | `docs/demo/README.md` (현재 개인 보관) | 포트폴리오 / 작업 기록 | 유지: 합성 자료·시드·실제 API·재녹화 범위 명확 |

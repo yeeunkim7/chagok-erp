@@ -1,4 +1,4 @@
-# 입출금 대사 백엔드 (Java)
+# 차곡 — 매출채권·입금 대사 시스템 · 백엔드
 
 이 디렉터리가 실행 단위입니다. 프로젝트 소개는 [../README.md](../README.md), 집계·검토 규칙은 [docs/design.md](docs/design.md)를 봅니다.
 
@@ -20,7 +20,7 @@
 | 테스트 | `TEST_DB_USERNAME` | PostgreSQL 역할 이름 |
 | 테스트 | `TEST_DB_PASSWORD` | 세션에서만 입력 |
 
-현재 저장소에는 Flyway V1–V13이 있으며 기동·테스트 시 연결한 DB에 미적용 마이그레이션을 적용합니다. V1–V7은 기존 대사, V8–V13은 계정·사업체와 미수금 기능입니다. JPA는 `validate`만 합니다. 과거 V7 테스트 적용 기록은 아래에 보존하며, 특정 실행 환경의 현재 적용 상태는 별도로 확인해야 합니다.
+현재 저장소에는 Flyway V1–V14이 있으며 기동·테스트 시 연결한 DB에 미적용 마이그레이션을 적용합니다. V1–V7은 기존 대사, V8–V13은 계정·사업체와 미수금 기능, V14는 청구 취소·대체 연결입니다. JPA는 `validate`만 합니다. 과거 V7 테스트 적용 기록은 아래에 보존하며, 특정 실행 환경의 현재 적용 상태는 별도로 확인해야 합니다.
 
 ## 앱 기동
 
@@ -121,11 +121,11 @@ finally {
 
 과거 실행 기록: **2026-10-02 13:15:42** HTML 보고서 기준 실행 45 · 성공 45 · 실패 0 · 건너뜀 0. `BankUploadIntegrationTest` 9개에 우리은행 신규 3개가 포함되어 있습니다. 같은 실행에서 `reconciliation_test`에 V7이 적용되었습니다.
 
-이후 2026-11-01 전체 실행은 **186개, 실패·오류·스킵 0**으로 기록되어 있습니다. [최신 기능 검증 기록](../docs/RECEIVABLES_MOBILE_MATCHING.md#실제-검증캡처)에 실행 범위와 재현 절차가 있습니다. 이번 문서 수정에서 테스트를 다시 실행한 결과는 아닙니다.
+2026-11-16 전체 재실행은 **220개, 실패·오류·스킵 0**, Flyway V1~V14 적용을 확인했습니다. [현재 검증 기록](../docs/REPOSITORY_VALIDATION.md)에 명령·환경·검증 한계를 정리했습니다. 아래 과거 실행 기록은 당시 범위입니다.
 
 ## 합성 CSV 예제
 
-위치: [`docs/examples/`](docs/examples/). `backend-java`를 작업 디렉터리로 두고 아래 순서로 호출합니다. 아래 curl 호스트는 8082 기준입니다.
+위치: [`docs/examples/`](docs/examples). `backend-java`를 작업 디렉터리로 두고 아래 순서로 호출합니다. 아래 curl 호스트는 8082 기준입니다.
 
 1. 선불·후불 거래처를 등록합니다 (`V-PRE-01`, `V-POST-01`). JSON은 현재 디렉터리의 파일로 보냅니다.
 2. `docs/examples/business-valid.csv`를 업무 업로드합니다. 따옴표 안 비고는 `business-quoted-note.csv`입니다.
@@ -212,4 +212,4 @@ curl.exe -s -X PUT http://localhost:8082/api/v1/reconciliations/daily/2026-09-03
 
 ## 별도 Docker 로컬 환경
 
-기존 WSL DB와 분리한 백엔드·개발/테스트 DB와 웹 실행은 [Docker 안내](../docs/DOCKER_LOCAL.md)를 따른다. 웹은 `http://localhost:18080`을 사용한다. CI/CD·배포는 별도 단계다.
+기존 WSL DB와 분리한 백엔드·개발/테스트 DB와 웹 실행은 [Docker 안내](../docs/DOCKER_LOCAL.md)를 따른다. 웹은 `http://localhost:18080`을 사용한다. GitHub Actions는 워크플로 구성 완료, 원격 실행 미검증이며 CD·운영 배포는 후속 단계다.

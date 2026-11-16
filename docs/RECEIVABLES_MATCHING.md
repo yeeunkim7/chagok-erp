@@ -97,6 +97,6 @@ run의 RUNNING 행·월 usage 잠금/승인·현재 자료 읽기·SUCCESS snaps
 
 전용 `reconciliation_test`와 개발 DB 거부 initializer, 실제 security filter를 사용하는 통합 테스트 14개를 추가했다. 정확한 금액/동일 이름/부분 후보, 빈 자료와 애매한 입금, 기간 양끝·오래된 청구·날짜 경고, 완납 제외와 취소 복원, 잘못된 저장 잔액 fail-closed, 정렬/top 표시 상한, Unicode 증거 보존, source 상한과 잘못된 설정, 입력/권한/직접 서비스 세션 재확인, 저장 결과 재전송/병렬 키 충돌/rollback, 배분 후 snapshot 불변과 기존 확정 재검증을 검사한다. AI 키와 스위치가 설정되어도 AI client/query 호출은 0인지 확인한다.
 
-V13 도입 후 테스트는 자기 tenant의 usage event/월 행 → V11 → V10 → V9 → identity 순서로 정리한다. 새 FK에 필요한 최소 matching cleanup 변경만 적용했다. 전체 회귀·패키징은 [작업 기록](AI_REVIEW_WORK.md)에 별도로 기록한다.
+V13 도입 후 테스트는 자기 tenant의 usage event/월 행 → V11 → V10 → V9 → identity 순서로 정리한다. 새 FK에 필요한 최소 matching cleanup 변경만 적용했다. 전체 회귀·패키징은 [작업 기록](ai/AI_REVIEW_WORK.md)에 별도로 기록한다.
 
 V13 한도 소진은429 `MATCHING_MONTHLY_LIMIT`와 usage/reset/Retry-After, 월 잠금 대기 중 월 변경은409 `MATCHING_MONTH_CHANGED`다. 실패 키 재시도와 과거/동일 키 0차감 재생 계약은 [사용량 문서](RECEIVABLES_USAGE.md)를 따른다.

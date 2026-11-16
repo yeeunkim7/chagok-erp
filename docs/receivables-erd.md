@@ -160,3 +160,15 @@ erDiagram
 - V13 월 사용량의 `(tenant_id,usage_month)` PK와 run별 event 키: 월 행 잠금 및 실행별 중복 차감 방지.
 
 전체 테이블을 ERD에 반복하지 않았다. 세션·등록 명령·CSV 출처·배분 명령의 정확한 컬럼과 제약은 [V8–V13 마이그레이션](../backend-java/src/main/resources/db/migration)을 따른다. 원본→배분→취소의 트랜잭션 범위와 롤백은 [아키텍처](architecture.md#java-호출-경계와-트랜잭션)에 정리한다.
+
+## V14: 청구 취소와 대체 연결
+
+```mermaid
+erDiagram
+    RECEIVABLE_INVOICE ||--o| RECEIVABLE_INVOICE_CANCELLATION : cancelled_by
+    RECEIVABLE_INVOICE_CANCELLATION ||--o{ RECEIVABLE_INVOICE_CANCELLATION_COMMAND : replayed_by
+    RECEIVABLE_INVOICE_CANCELLATION ||--o| RECEIVABLE_INVOICE_REPLACEMENT : corrected_by
+    RECEIVABLE_INVOICE ||--o| RECEIVABLE_INVOICE_REPLACEMENT : replacement_invoice
+```
+
+[V14](../backend-java/src/main/resources/db/migration/V14__invoice_input_cancellation.sql)는 원본 청구를 갱신하지 않고 취소 사유·actor·시각을 추가한다. 취소는 tenant/invoice당 1건이며 취소 명령은 tenant/key로 유일하다. 대체 연결의 양쪽은 tenant 복합 FK로 검증하고, 취소한 원문 한 건에 대체 청구 하나만 연결한다. 취소 여부는 현재 원장 잔액·새 배분 대상에서 반영된다. [업무 계약](RECEIVABLES_INVOICE_CANCELLATION.md).
