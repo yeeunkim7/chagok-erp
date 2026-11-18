@@ -80,3 +80,7 @@ venv/
 # Private interview notes (store outside the repository)
 INTERVIEW_NOTES*
 /chagok-private/
+
+# PostgreSQL backups and incomplete/metadata companions stay outside Git
+*.dump
+*.dump.*
