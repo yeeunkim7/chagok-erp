@@ -139,3 +139,73 @@ secret 파일만 바꿔도 기존 DB 비밀번호가 바뀌지 않는다. 변경
 첫 실행에서 계정 화면의 비동기 조회와 강제 세션 종료가 겹쳐 테스트 클릭 대상이 사라졌다. 기존 검증 스크립트에 계정 화면·네트워크 완료 대기를 추가한 후9개 전체가 통과했다. 별도로 웹 healthcheck의 wget이 클라우드 프록시로 loopback 요청을 보내403을 받았다. 해당 로컬 프로브에만 `-Y off`를 적용하고 재빌드해 healthy를 확인했다. TLS나 외부 요청의 인증서 검증을 끄지 않았다. 독립 재검토에서 두 수정과 결과를 확인했다.
 
 Java 전체197개 결과는 같은 작업 브랜치의 2-A 검증을 재사용했다. 2-B에서 Java 소스·마이그레이션 변경이 없어 전체 Java 테스트는 반복하지 않았다. 사용자 PC Docker Desktop/WSL·재부팅, iOS/Android 실기기, 운영 부하·백업 복원·CI/CD·외부 배포는 여전히 미검증이다. 커밋·푸시·공개 배포·유료 AI 호출은 수행하지 않았다.
+
+## 별도 DB 백업·복원 검증 환경
+
+2026-11-18 사용자 승인 범위다. `compose.backup-check.yaml`은 기본 Compose와 **합치지 않고 단독으로** 실행한다. `chagok-backup-check` 프로젝트의 `db-source`와 `db-restore`만 다루며 둘 다 `reconciliation_test` / `chagok_test`를 사용한다. 기존 개발·테스트 볼륨을 마운트하지 않는다. 각 DB는 서로 다른 internal 네트워크·전용 named volume을 가지며 호스트 DB 포트는 없다. 선택적인 `source-api` / `restore-api`도 해당 네트워크에만 연결한다.
+
+첫 구현은 가상 거래를 사용하는 **복구 연습용**이다. 현재 개발 DB를 백업하는 명령이 아니며, 운영 계정·비밀번호 복구, 암호화, 외부 보관, 주기적 백업, 시점 복구(PITR)는 포함하지 않는다. 같은 PC의 백업만으로 PC 고장에 대비할 수는 없다. 기존 DB나 볼륨을 지워서 검증하지 않는다.
+
+### 준비와 백업
+
+Ubuntu의 Linux 파일시스템에 있는 저장소 루트에서 실행한다. 기존 Docker 비밀 파일은 유지하며 새 도구 설치는 필요 없다. Python 3와 Docker Compose를 사용하고, 스크립트는 로컬 Unix Docker 소켓을 명시한다.
+
+```sh
+python3 scripts/setup-docker-secrets.py
+docker compose -f compose.backup-check.yaml up -d --wait db-source db-restore
+
+# 현재 소스에 해당하는 Java 이미지를 준비한다(기존 개발 서비스 기동은 하지 않음).
+docker compose build backend
+docker compose -f compose.backup-check.yaml --profile app up -d --wait source-api
+```
+
+`source-api` 최초 기동으로 원본 검증 DB에 기존 Flyway를 적용한다. 업무 잔액까지 확인하려면 이 전용 API에 가상 거래처·청구·입금·배분·취소를 먼저 등록한다. 계정·토큰·원본 행은 로그나 문서에 출력하지 않는다. 이 환경의 API는 외부에 포트를 열지 않으므로 컨테이너 내부에서만 호출한다. 스크립트는 가상 거래를 자동 생성하지 않는다. 빈 업무 테이블의 복원만 확인한 결과를 금액 검증 완료라고 기록하지 않는다.
+
+```sh
+# 백업·복원 중에는 두 API를 모두 중지한다.
+docker compose -f compose.backup-check.yaml --profile app stop source-api restore-api
+python3 scripts/backup-db.py --output-dir "$HOME/chagok-backups"
+```
+
+완료하면 `.dump`와 `.dump.manifest.json`을 함께 보관한다. 출력 폴더는 새로 만들거나, 기존 사용자 소유의 권한0700 폴더를 지정한다. 파일은0600이다. 저장소 안 경로와 symlink는 거절한다. 오류 시 `.partial`은 정상 백업이 아니며, dump만 있고 manifest가 없으면 완료로 인정하지 않는다. 기존 파일을 덮어쓰지 않는다. manifest 형식2만 지원한다.
+
+`pg_dump --format=custom --no-owner --no-acl`을 사용한다. exported REPEATABLE READ 스냅샷으로 dump와 데이터 지문의 기준을 맞춘다. 시퀀스는 MVCC 대상이 아니므로 원본에 대한 모든 쓰기를 멈춰야 하며, 전후 시퀀스 변화도 검사한다. API 실행 중이거나 예상하지 않은 컨테이너가 연결돼 있으면 거절한다. DB 역할·비밀번호는 dump에 포함하지 않고 검증 DB 초기화 절차로 별도 준비한다.
+
+### 빈 대상에 복원
+
+```sh
+# 아래 경로는 backup-db.py가 출력한 실제 파일명으로 바꾼다.
+python3 scripts/verify-db-restore.py "$HOME/chagok-backups/<백업파일>.dump"
+```
+
+두 DB의 프로젝트·서비스·볼륨·네트워크·DB명·PostgreSQL17·앱 역할 권한을 확인한다. 백업 체크섬과 manifest를 검사하고, **빈 대상에만** `pg_restore --single-transaction --exit-on-error --no-owner --no-acl`로 복원한다. `--clean`, DROP, 기존 DB 초기화를 사용하지 않는다. 한 번 복원한 대상에는 재실행하지 않는다. 타임아웃은 결과 불확실 상태이므로 자동 재시도하지 않는다.
+
+비교 대상은 public 스키마의 테이블별 건수·행 SHA-256, 컬럼·제약·인덱스·시퀀스 정의, 시퀀스 현재 상태, Flyway 이력이다. CHECK 제약은 복원 시 같은 의미의 식이 다르게 표기될 수 있어 PostgreSQL의 `EXPLAIN (VERBOSE, FORMAT JSON, COSTS OFF)` 출력으로 정규화하고 검증·지연·상속 속성도 비교한다. `EXPLAIN ANALYZE`나 사용자 데이터 출력은 하지 않는다. 기존 Java 잔액 API 비교는 별도 단계이며 복원 스크립트 자체가 완료했다고 표시하지 않는다.
+
+신뢰하는 로컬 백업만 복원한다. SHA-256은 손상 탐지이며 위조 방지 서명이 아니다. dump에는 계정 비밀번호 해시·세션 해시·업무 데이터가 포함된다. dump·manifest·비밀 파일을 Git이나 CI artifact로 올리지 않는다. DB에 저장된 업로드 메타정보와 거래 행은 포함되지만 사용자가 업로드했던 CSV 파일 자체를 재생성하는 기능은 아니다. 큰 DB의 처리 시간·메모리 한도는 별도 검증이 필요하다.
+
+### 중지와 재검증
+
+```sh
+docker compose -f compose.backup-check.yaml --profile app stop
+```
+
+중지는 검증용 볼륨과 백업을 보존한다. 재검증은 기존 복원 볼륨을 덮어쓰는 대신, 별도 Compose override에서 `restore-data`의 `name`을 새로운 이름으로 지정해 빈 볼륨을 준비한다. 기본 개발 Compose와는 합치지 않는다. 이전 복원 볼륨은 남긴다. 컨테이너·볼륨·백업 파일 삭제는 이번 자동화에 포함하지 않는다. Java 전체 회귀·실제 PC 재부팅·운영 복구 검증과 이 연습의 결과를 구분한다.
+
+### 실제 실행 결과 — 2026-11-18
+
+클라우드 Linux의 새 `chagok-backup-check` 환경에서 기존 Java 이미지로 가상 거래를 등록했다. 청구100,000원+50,000원, 입금120,000원, 각각100,000원/20,000원을 별도 배분한 뒤 두 번째 배분을 취소한 상태를 백업했다. 기존 개발·테스트 DB는 기동하거나 조회하지 않았다.
+
+| 확인 | 결과 |
+| --- | --- |
+| 백업·복원 | 형식2 custom dump 생성과 빈 대상 복원 성공. 업무 테이블 28개와 Flyway 관리 테이블 1개, 총 29개 테이블의 건수/행해시, 스키마·시퀀스·Flyway 14개 이력 일치 |
+| Java 업무 조회 | 복원 전후 요약·배분/감사 API 응답 일치. 미수50,000원, 미배분 입금20,000원. Java 계산 코드는 수정하지 않음 |
+| 원본 보존 | 복원 후 원본 지문이 백업 스냅샷과 일치. Java 조회 후 복원 대상 지문도 일치 |
+| 거절 경로 | 저장소 내 출력·기존 0755 폴더·symlink·체크섬 변조·0644 dump·잘못된 header·손상 archive·비어 있지 않은 대상·예상 외 서비스 9개 확인 |
+| 실패 롤백 | 손상 archive의 체크섬을 의도적으로 갱신해 복원 실패를 유발했으며 대상 public 테이블 0개 유지 확인. 이후 정상 dump 복원 성공 |
+| 비밀·권한 | 검증 컨테이너 4개의 로그에서 확인한 secret 값·세션 토큰 일치 0건. 백업 폴더 0700·파일 0600 확인 |
+| 정적·독립 검토 | Python 3개 파일의 AST·CLI help, diff 검사·dump Git 제외 규칙 통과. 별도 검토에서 차단 결함 없음 |
+
+최초 복원은 데이터·시퀀스·Flyway가 같았지만 CHECK의 동등한 표현 차이로 스키마 비교가 실패했다. 원본과 첫 복원 볼륨을 보존했다. PostgreSQL이 정규화한 CHECK 75개의 Output 일치를 확인해 비교 코드를 보완한 뒤, 새 `chagok-backup-check_restore-data-v2` 볼륨에서 다시 검증했다. 기존 DB SQL·마이그레이션은 바꾸지 않았다. 첫 형식1 dump는 현재 도구에서 거절된다.
+
+백업은 저장소 밖 `/workspace/chagok-backups/`, 검증 도우미·결과는 `/workspace/.local/run/backup-validation-20261118/`에 보관했다. 이번 검증용 컨테이너만 모두 중지했고 source/첫restore/restore-v2 볼륨을 유지했다. Java 전체 회귀와 유료 AI 호출·커밋·푸시·배포는 수행하지 않았다. 사용자 PC에서의 백업·복원, 운영 자료 복구, 대용량·성능·외부 보관·암호화는 미검증이다.
